@@ -664,6 +664,7 @@ private:
     void unexpected_message(void);
     void log_mon_hw(void);
     void log_mon_hw2(void);
+    void log_relposned(void);
     void log_rxm_raw(const struct ubx_rxm_raw &raw);
     void log_rxm_rawx(const struct ubx_rxm_rawx &raw);
 
