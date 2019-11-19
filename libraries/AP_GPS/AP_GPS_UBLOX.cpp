@@ -523,6 +523,7 @@ void AP_GPS_UBLOX::log_mon_hw(void)
     if (!should_log()) {
         return;
     }
+    
     struct log_Ubx1 pkt = {
         LOG_PACKET_HEADER_INIT(_ubx_msg_log_index(LOG_GPS_UBX1_MSG)),
         time_us    : AP_HAL::micros64(),
@@ -560,6 +561,39 @@ void AP_GPS_UBLOX::log_mon_hw2(void)
         magQ      : _buffer.mon_hw2.magQ,
     };
     AP::logger().WriteBlock(&pkt, sizeof(pkt));
+#endif
+}
+
+void AP_GPS_UBLOX::log_relposned(void)
+{
+#ifndef HAL_NO_LOGGING
+    if (!should_log()) {
+        return;
+    }
+
+    switch(state.instance){
+    case 0:
+        AP::logger().Write("UBR1", "TimeUS,Instance,relPosN,relPosE,relPosD,relPosLength,relPosHeading", "QBiiiii", 
+                           AP_HAL::micros64(),
+                           (uint8_t)state.instance,
+                           (int32_t)_buffer.relposned.relPosN,
+                           (int32_t)_buffer.relposned.relPosE,
+                           (int32_t)_buffer.relposned.relPosD,
+                           (int32_t)_buffer.relposned.relPosLength,
+                           (int32_t) _buffer.relposned.relPosHeading);
+        break;
+    case 1:
+        AP::logger().Write("UBR2", "TimeUS,Instance,relPosN,relPosE,relPosD,relPosLength,relPosHeading", "QBiiiii", 
+                           AP_HAL::micros64(),
+                           (uint8_t)state.instance,
+                           (int32_t)_buffer.relposned.relPosN,
+                           (int32_t)_buffer.relposned.relPosE,
+                           (int32_t)_buffer.relposned.relPosD,
+                           (int32_t)_buffer.relposned.relPosLength,
+                           (int32_t) _buffer.relposned.relPosHeading);
+        break;
+    }
+
 #endif
 }
 
@@ -1099,6 +1133,7 @@ AP_GPS_UBLOX::_parse_gps(void)
         break;
     case MSG_RELPOSNED:
         {
+            log_relposned();
             const Vector3f &offset0 = gps._antenna_offset[0].get();
             const Vector3f &offset1 = gps._antenna_offset[1].get();
             // note that we require the yaw to come from a fixed solution, not a float solution
