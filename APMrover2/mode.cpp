@@ -475,6 +475,9 @@ Mode *Rover::mode_from_mode_num(const enum Mode::Number num)
     case Mode::Number::INITIALISING:
         ret = &mode_initializing;
         break;
+    case Mode::Number::AUTO_ASSIST:
+        ret = &mode_autoassist;
+        break;
     default:
         break;
     }

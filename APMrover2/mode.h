@@ -30,7 +30,8 @@ public:
         RTL          = 11,
         SMART_RTL    = 12,
         GUIDED       = 15,
-        INITIALISING = 16
+        INITIALISING = 16,
+        AUTO_ASSIST = 17
     };
 
     // Constructor
@@ -670,3 +671,132 @@ private:
     float _desired_heading_cd;  // latest desired heading (in centi-degrees) from pilot
 };
 
+class ModeAutoAssist : public Mode
+{
+public:
+
+    uint32_t mode_number() const override { return AUTO_ASSIST; }
+    const char *name4() const override { return "AUTO ASSIST"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+    void calc_throttle(float target_speed, bool avoidance_enabled) override;
+
+    // attributes of the mode
+    bool is_autopilot_mode() const override { return true; }
+
+    // return if external control is allowed in this mode (Guided or Guided-within-Auto)
+    bool in_guided_mode() const override { return _submode == Auto_Assisted; }
+
+    // return distance (in meters) to destination
+    float get_distance_to_destination() const override;
+
+    // get or set desired location
+    bool get_desired_location(Location& destination) const override WARN_IF_UNUSED;
+    bool set_desired_location(const struct Location& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN) override WARN_IF_UNUSED;
+    bool reached_destination() const override;
+
+    // set desired speed in m/s
+    bool set_desired_speed(float speed) override;
+
+    // start RTL (within auto)
+    void start_RTL();
+
+    AP_Mission mission{
+        FUNCTOR_BIND_MEMBER(&ModeAuto::start_command, bool, const AP_Mission::Mission_Command&),
+        FUNCTOR_BIND_MEMBER(&ModeAuto::verify_command_callback, bool, const AP_Mission::Mission_Command&),
+        FUNCTOR_BIND_MEMBER(&ModeAuto::exit_mission, void)};
+
+protected:
+
+    bool _enter() override;
+    void _exit() override;
+
+    enum AutoSubMode {
+        Auto_WP,                // drive to a given location
+        Auto_HeadingAndSpeed,   // turn to a given heading
+        Auto_RTL,               // perform RTL within auto mode
+        Auto_Loiter,            // perform Loiter within auto mode
+        Auto_Guided,            // handover control to external navigation system from within auto mode
+        Auto_Assisted,          // for co-robot mode testing
+        Auto_Stop               // stop the vehicle as quickly as possible
+    } _submode;
+
+private:
+
+    bool check_trigger(void);
+    bool start_loiter();
+    void start_guided(const Location& target_loc);
+    void start_stop();
+    void send_guided_position_target();
+
+    bool start_command(const AP_Mission::Mission_Command& cmd);
+    void exit_mission();
+    bool verify_command_callback(const AP_Mission::Mission_Command& cmd);
+
+    bool verify_command(const AP_Mission::Mission_Command& cmd);
+    void do_RTL(void);
+    bool do_nav_wp(const AP_Mission::Mission_Command& cmd, bool always_stop_at_destination);
+    void do_nav_guided_enable(const AP_Mission::Mission_Command& cmd);
+    void do_nav_set_yaw_speed(const AP_Mission::Mission_Command& cmd);
+    void do_nav_delay(const AP_Mission::Mission_Command& cmd);
+    bool verify_nav_delay(const AP_Mission::Mission_Command& cmd);
+    bool verify_nav_wp(const AP_Mission::Mission_Command& cmd);
+    bool verify_RTL();
+    bool verify_loiter_unlimited(const AP_Mission::Mission_Command& cmd);
+    bool verify_loiter_time(const AP_Mission::Mission_Command& cmd);
+    bool verify_nav_guided_enable(const AP_Mission::Mission_Command& cmd);
+    bool verify_nav_set_yaw_speed();
+    void do_wait_delay(const AP_Mission::Mission_Command& cmd);
+    void do_within_distance(const AP_Mission::Mission_Command& cmd);
+    bool verify_wait_delay();
+    bool verify_within_distance();
+    void do_change_speed(const AP_Mission::Mission_Command& cmd);
+    void do_set_home(const AP_Mission::Mission_Command& cmd);
+    void do_set_reverse(const AP_Mission::Mission_Command& cmd);
+    void do_guided_limits(const AP_Mission::Mission_Command& cmd);
+
+    enum Mis_Done_Behave {
+        MIS_DONE_BEHAVE_HOLD      = 0,
+        MIS_DONE_BEHAVE_LOITER    = 1,
+        MIS_DONE_BEHAVE_ACRO      = 2
+    };
+
+    bool auto_triggered;        // true when auto has been triggered to start
+
+    // HeadingAndSpeed sub mode variables
+    float _desired_speed;   // desired speed in HeadingAndSpeed submode
+    bool _reached_heading;  // true when vehicle has reached desired heading in TurnToHeading sub mode
+
+    // Loiter control
+    uint16_t loiter_duration;       // How long we should loiter at the nav_waypoint (time in seconds)
+    uint32_t loiter_start_time;     // How long have we been loitering - The start time in millis
+    bool previously_reached_wp;     // set to true if we have EVER reached the waypoint
+
+    // Guided-within-Auto variables
+    struct {
+        Location loc;           // location target sent to external navigation
+        bool valid;             // true if loc is valid
+        uint32_t last_sent_ms;  // system time that target was last sent to offboard navigation
+    } guided_target;
+
+    // Assisted-within-Auto variables
+    struct {
+        Location loc;           // location target sent to external navigation
+        bool valid;             // true if loc is valid
+        uint32_t last_sent_ms;  // system time that target was last sent to offboard navigation
+    } assisted_input;
+
+    // Conditional command
+    // A value used in condition commands (eg delay, change alt, etc.)
+    // For example in a change altitude command, it is the altitude to change to.
+    int32_t condition_value;
+    // A starting value used to check the status of a conditional command.
+    // For example in a delay command the condition_start records that start time for the delay
+    int32_t condition_start;
+
+    // Delay the next navigation command
+    uint32_t nav_delay_time_max_ms;  // used for delaying the navigation commands
+    uint32_t nav_delay_time_start_ms;
+
+};
