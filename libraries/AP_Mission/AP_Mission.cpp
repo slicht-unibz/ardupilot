@@ -1540,6 +1540,38 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
         _flags.do_cmd_all_done = true;
     }
 
+    //Now backtrack to find previous nav command, in case trackline following from the last waypoint is desired:
+    uint8_t found_previous_nav_cmd = 0;
+    if (cmd_index<2) {
+        cmd_index = 0;
+    }
+    else {
+        cmd_index = cmd_index-2; //jump back to cmd before current
+    }
+    
+    while(!found_previous_nav_cmd && cmd_index>0) {            
+        if (get_next_cmd(cmd_index, cmd, true)) {
+            // check if navigation or "do" command
+            if (is_nav_cmd(cmd)) {
+                // save previous nav command index
+                _prev_nav_cmd_id = cmd.id;
+                _prev_nav_cmd_index = cmd.index;
+                _prev_nav_cmd = cmd;
+                // save separate previous nav command index if it contains lat,long,alt
+                if (!(cmd.content.location.lat == 0 && cmd.content.location.lng == 0)) {
+                    _prev_nav_cmd_wp_index = cmd.index;
+                }
+                found_previous_nav_cmd = 1;
+            }
+            else {
+                cmd_index = cmd_index-1;
+            }
+        }
+        else {
+            cmd_index = 0;
+        }
+    }
+
     // if we got this far we must have successfully advanced the nav command
     return true;
 }

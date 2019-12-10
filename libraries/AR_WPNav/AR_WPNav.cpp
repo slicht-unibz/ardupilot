@@ -166,6 +166,11 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
     // set origin to last destination if waypoint controller active
     if (is_active() && _orig_and_dest_valid && _reached_destination) {
         _origin = _destination;
+        if (!rover.mission._prev_nav_cmd_wp_index==AP_MISSION_CMD_INDEX_NONE) {
+            Location cmdprev = rover.mission._prev_nav_cmd.content.location;
+            cmdprev.sanitize(rover.curren_loc);
+            _origin = cmdprev;
+        }
     } else {
         // otherwise use reasonable stopping point
         if (!get_stopping_location(_origin)) {
@@ -342,6 +347,8 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
     float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
     float yaw_error_cd = wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor);
 
+    float lateral_acceleration_correction = 0;
+    
     // calculate desired turn rate and update desired heading
     if (use_pivot_steering(yaw_error_cd)) {
         _cross_track_error = 0.0f;
@@ -355,6 +362,7 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
 
         // retrieve lateral acceleration, heading back towards line and crosstrack error
         _desired_lat_accel = constrain_float(_nav_controller.lateral_acceleration(), -_turn_max_mss, _turn_max_mss);
+        _desired_lat_accel += lateral_acceleration_correction;
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
         if (_reversed) {
             _desired_lat_accel *= -1.0f;
