@@ -36,6 +36,10 @@ public:
     // get desired lateral acceleration (for reporting purposes only because will be zero during pivot turns)
     float get_lat_accel() const { return _desired_lat_accel; }
 
+    // set current destination
+    bool set_current_destination(const struct Location& destination);
+    bool set_lateral_acceleration_correction(float lateral_acceleration_correction);
+    
     // set desired location
     // next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
     bool set_desired_location(const struct Location& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN)  WARN_IF_UNUSED;
@@ -48,6 +52,7 @@ public:
 
     // true if vehicle has reached desired location. defaults to true because this is normally used by missions and we do not want the mission to become stuck
     bool reached_destination() const { return _reached_destination; }
+    bool set_reached_destination(bool value_to_set); 
 
     // return distance (in meters) to destination
     float get_distance_to_destination() const { return _distance_to_destination; }
@@ -65,6 +70,7 @@ public:
     float wp_bearing_cd() const { return _wp_bearing_cd; }
     float nav_bearing_cd() const { return _desired_heading_cd; }
     float crosstrack_error() const { return _cross_track_error; }
+    float lateral_acceleration_correction() const { return _lateral_acceleration_correction; }
 
     // return the heading (in centi-degrees) to the next waypoint accounting for OA, (used by sailboats)
     float oa_wp_bearing_cd() const { return _oa_wp_bearing_cd; }
@@ -139,6 +145,7 @@ private:
     float _desired_speed_final;     // desired speed in m/s when we reach the destination
 
     // main outputs from navigation library
+    float _lateral_acceleration_correction;  //used as catchall to adjust controller (e.g. with joystick override)
     float _desired_speed;           // desired speed in m/s
     float _desired_speed_limited;   // desired speed (above) but accel/decel limited and reduced to keep vehicle within _overshoot of line
     float _desired_turn_rate_rads;  // desired turn-rate in rad/sec (negative is counter clockwise, positive is clockwise)

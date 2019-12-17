@@ -142,6 +142,7 @@ void Mode::get_pilot_desired_lateral(float &lateral_out)
 
     // get pilot lateral input
     lateral_out = rover.channel_lateral->get_control_in();
+    lateral_out = lateral_out/50;
 }
 
 // decode pilot's input and return heading_out (in cd) and speed_out (in m/s)
@@ -365,6 +366,9 @@ float Mode::calc_speed_nudge(float target_speed, bool reversed)
 void Mode::navigate_to_waypoint()
 {
     // update navigation controller
+    float lateral_acceleration_correction = 0;
+    get_pilot_desired_lateral(lateral_acceleration_correction);
+    g2.wp_nav.set_lateral_acceleration_correction(lateral_acceleration_correction);
     g2.wp_nav.update(rover.G_Dt);
     _distance_to_destination = g2.wp_nav.get_distance_to_destination();
 

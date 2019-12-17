@@ -543,9 +543,26 @@ bool ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd, bool always_sto
         next_leg_bearing_cd = mission.get_next_ground_course_cd(AR_WPNAV_HEADING_UNKNOWN);
     }
 
+    // set current destination to the destination _before_ the target WP:
+    // allows L1 control to follow line between the target WP and the one right before it
+    mission.advance_previous_nav_cmd();
+    AP_Mission::Mission_Command prev_cmd;
+    uint16_t prev_wp_index = mission.get_prev_nav_cmd_with_wp_index();
+    if (!(prev_wp_index==AP_MISSION_CMD_INDEX_NONE)) {
+        if (!mission.read_cmd_from_storage(prev_wp_index,prev_cmd)) {
+            return false;
+        }
+        Location prevloc = prev_cmd.content.location;
+        g2.wp_nav.set_current_destination(prevloc);
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "ModeAuto::do_nav_wp set destination");
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "ModeAuto::origin lat: %d",  prevloc.lat);        
+    }
+    
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "ModeAuto::do_nav_wp PWP: %d", prev_wp_index);    
     // retrieve and sanitize target location
     Location cmdloc = cmd.content.location;
     cmdloc.sanitize(rover.current_loc);
+    g2.wp_nav.set_reached_destination(true);
     if (!set_desired_location(cmdloc, next_leg_bearing_cd)) {
         return false;
     }

@@ -134,14 +134,14 @@ void AR_WPNav::update(float dt)
         _oa_origin = _origin;
         _oa_destination = _destination;
     }
-
     update_distance_and_bearing_to_destination();
 
     // check if vehicle has reached the destination
     const bool near_wp = _distance_to_destination <= _radius;
-    const bool past_wp = !_oa_active && current_loc.past_interval_finish_line(_origin, _destination);
+    const bool past_wp = false; //!_oa_active && current_loc.past_interval_finish_line(_origin, _destination);
     if (!_reached_destination && (near_wp || past_wp)) {
        _reached_destination = true;
+       gcs().send_text(MAV_SEVERITY_CRITICAL, "near wp");
     }
 
     // handle stopping vehicle if avoidance has failed
@@ -160,23 +160,43 @@ void AR_WPNav::update(float dt)
     update_desired_speed(dt);
 }
 
+//toggle reached_destination:
+bool AR_WPNav::set_reached_destination(bool value_to_set)
+{
+    _reached_destination = value_to_set;
+    return _reached_destination;
+}
+
+// set_current_destination
+bool AR_WPNav::set_current_destination(const struct Location& destination)
+{
+    _destination = _oa_destination = destination;
+    _origin = _oa_destination = destination;
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV _origin lat: %d",  _origin.lat);
+    return true;
+}
+
+// set_lateral_acceleration_correction
+bool AR_WPNav::set_lateral_acceleration_correction(float lateral_acceleration_correction)
+{
+    _lateral_acceleration_correction = lateral_acceleration_correction;
+    return true;
+}
+
 // set desired location
 bool AR_WPNav::set_desired_location(const struct Location& destination, float next_leg_bearing_cd)
 {
-    // set origin to last destination if waypoint controller active
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV2::origin lat: %d",  _origin.lat);        
+    // if waypoint controller active, set origin to last destination
     if (is_active() && _orig_and_dest_valid && _reached_destination) {
-        _origin = _destination;
-        if (!rover.mission._prev_nav_cmd_wp_index==AP_MISSION_CMD_INDEX_NONE) {
-            Location cmdprev = rover.mission._prev_nav_cmd.content.location;
-            cmdprev.sanitize(rover.curren_loc);
-            _origin = cmdprev;
-        }
+            _origin = _destination;
     } else {
         // otherwise use reasonable stopping point
         if (!get_stopping_location(_origin)) {
             return false;
         }
     }
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV3::origin lat: %d",  _origin.lat);        
 
     // initialise some variables
     _oa_origin = _origin;
@@ -185,6 +205,8 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
     _reached_destination = false;
     update_distance_and_bearing_to_destination();
 
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV4::origin lat: %d",  _origin.lat);
+    
     // set final desired speed
     _desired_speed_final = 0.0f;
     if (!is_equal(next_leg_bearing_cd, AR_WPNAV_HEADING_UNKNOWN)) {
@@ -205,7 +227,8 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
             apply_speed_min(_desired_speed_final);
         }
     }
-
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV5::origin lat: %d",  _origin.lat);        
+    
     return true;
 }
 
@@ -346,9 +369,7 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
     // calculate yaw error for determining if vehicle should pivot towards waypoint
     float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
     float yaw_error_cd = wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor);
-
-    float lateral_acceleration_correction = 0;
-    
+      
     // calculate desired turn rate and update desired heading
     if (use_pivot_steering(yaw_error_cd)) {
         _cross_track_error = 0.0f;
@@ -358,11 +379,17 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
     } else {
         // run L1 controller
         _nav_controller.set_reverse(_reversed);
-        _nav_controller.update_waypoint(_reached_destination ? current_loc : _oa_origin, _oa_destination, _radius);
 
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "_oa origin lat: %d_", _oa_origin.lat);
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "    origin lat: %d",  _origin.lat);
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "   current lat: %d",  current_loc.lat);
+        
+        _nav_controller.update_waypoint(_reached_destination ? current_loc : _oa_origin, _oa_destination, _radius);
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "using L1");
+    
         // retrieve lateral acceleration, heading back towards line and crosstrack error
         _desired_lat_accel = constrain_float(_nav_controller.lateral_acceleration(), -_turn_max_mss, _turn_max_mss);
-        _desired_lat_accel += lateral_acceleration_correction;
+        _desired_lat_accel += _lateral_acceleration_correction;
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
         if (_reversed) {
             _desired_lat_accel *= -1.0f;

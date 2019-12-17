@@ -1462,6 +1462,33 @@ void AP_Mission::complete()
     _mission_complete_fn();
 }
 
+
+/// advance_previous_nav_cmd - moves previous nav command forward to one before current
+void AP_Mission::advance_previous_nav_cmd()
+{
+    // //First, find previous nav command, in case trackline following from the last waypoint is desired:
+    uint16_t cmd_index = AP_MISSION_FIRST_REAL_COMMAND;    
+    while(cmd_index<_nav_cmd.index) {
+        Mission_Command cmd;
+        if (get_next_cmd(cmd_index, cmd, true)) {
+            // check if navigation or "do" command
+            if (is_nav_cmd(cmd)) {
+                // save previous nav command index
+                _prev_nav_cmd_id = cmd.id;
+                _prev_nav_cmd_index = cmd.index;
+                // save separate previous nav command index if it contains lat,long,alt
+                if (!(cmd.content.location.lat == 0 && cmd.content.location.lng == 0)) {
+                    _prev_nav_cmd_wp_index = cmd.index;
+                }
+            }
+        }
+        cmd_index++;
+    }
+
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AP_Mission::advance_previous_nav_cmd PWP: %d", _prev_nav_cmd_wp_index);
+}
+
+
 /// advance_current_nav_cmd - moves current nav command forward
 ///     do command will also be loaded
 ///     accounts for do-jump commands
@@ -1483,8 +1510,12 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
     _flags.do_cmd_loaded = false;
     _flags.do_cmd_all_done = false;
 
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AP_Mission::advance_current_nav_cmd SI %d", starting_index);
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "AP_Mission::advance_current_nav_cmd PWP %d", _prev_nav_cmd_wp_index);
+
+    uint16_t cmd_index = AP_MISSION_FIRST_REAL_COMMAND;    
     // get starting point for search
-    uint16_t cmd_index = starting_index > 0 ? starting_index - 1 : _nav_cmd.index;
+    cmd_index = starting_index > 0 ? starting_index - 1 : _nav_cmd.index;
     if (cmd_index == AP_MISSION_CMD_INDEX_NONE) {
         // start from beginning of the mission command list
         cmd_index = AP_MISSION_FIRST_REAL_COMMAND;
@@ -1495,7 +1526,7 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
 
     // avoid endless loops
     uint8_t max_loops = 255;
-
+    
     // search until we find next nav command or reach end of command list
     while (!_flags.nav_cmd_loaded) {
         // get next command
@@ -1506,13 +1537,6 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
 
         // check if navigation or "do" command
         if (is_nav_cmd(cmd)) {
-            // save previous nav command index
-            _prev_nav_cmd_id = _nav_cmd.id;
-            _prev_nav_cmd_index = _nav_cmd.index;
-            // save separate previous nav command index if it contains lat,long,alt
-            if (!(cmd.content.location.lat == 0 && cmd.content.location.lng == 0)) {
-                _prev_nav_cmd_wp_index = _nav_cmd.index;
-            }
             // set current navigation command and start it
             _nav_cmd = cmd;
             if (start_command(_nav_cmd)) {
@@ -1540,37 +1564,7 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
         _flags.do_cmd_all_done = true;
     }
 
-    //Now backtrack to find previous nav command, in case trackline following from the last waypoint is desired:
-    uint8_t found_previous_nav_cmd = 0;
-    if (cmd_index<2) {
-        cmd_index = 0;
-    }
-    else {
-        cmd_index = cmd_index-2; //jump back to cmd before current
-    }
-    
-    while(!found_previous_nav_cmd && cmd_index>0) {            
-        if (get_next_cmd(cmd_index, cmd, true)) {
-            // check if navigation or "do" command
-            if (is_nav_cmd(cmd)) {
-                // save previous nav command index
-                _prev_nav_cmd_id = cmd.id;
-                _prev_nav_cmd_index = cmd.index;
-                _prev_nav_cmd = cmd;
-                // save separate previous nav command index if it contains lat,long,alt
-                if (!(cmd.content.location.lat == 0 && cmd.content.location.lng == 0)) {
-                    _prev_nav_cmd_wp_index = cmd.index;
-                }
-                found_previous_nav_cmd = 1;
-            }
-            else {
-                cmd_index = cmd_index-1;
-            }
-        }
-        else {
-            cmd_index = 0;
-        }
-    }
+    advance_previous_nav_cmd();
 
     // if we got this far we must have successfully advanced the nav command
     return true;
