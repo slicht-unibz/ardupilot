@@ -38,8 +38,11 @@ public:
 
     // set current destination
     bool set_current_destination(const struct Location& destination);
-    bool set_lateral_acceleration_correction(float lateral_acceleration_correction);
-    
+
+    // manage use of lateral control from joystick input
+    bool set_lateral_acceleration_input(float lateral_acceleration_input);
+    bool apply_human_control();
+
     // set desired location
     // next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
     bool set_desired_location(const struct Location& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN)  WARN_IF_UNUSED;
@@ -70,7 +73,7 @@ public:
     float wp_bearing_cd() const { return _wp_bearing_cd; }
     float nav_bearing_cd() const { return _desired_heading_cd; }
     float crosstrack_error() const { return _cross_track_error; }
-    float lateral_acceleration_correction() const { return _lateral_acceleration_correction; }
+    float lateral_acceleration_input() const { return _lateral_acceleration_input; }
 
     // return the heading (in centi-degrees) to the next waypoint accounting for OA, (used by sailboats)
     float oa_wp_bearing_cd() const { return _oa_wp_bearing_cd; }
@@ -125,6 +128,8 @@ private:
     AP_Float _overshoot;            // maximum horizontal overshoot in meters
     AP_Int16 _pivot_angle;          // angle error that leads to pivot turn
     AP_Int16 _pivot_rate;           // desired turn rate during pivot turns in deg/sec
+    AP_Int16 _blend_ks;
+    AP_Int16 _blend_kh;
 
     // references
     AR_AttitudeControl& _atc;       // rover attitude control library
@@ -145,7 +150,8 @@ private:
     float _desired_speed_final;     // desired speed in m/s when we reach the destination
 
     // main outputs from navigation library
-    float _lateral_acceleration_correction;  //used as catchall to adjust controller (e.g. with joystick override)
+    float _lateral_acceleration_input;  //used as catchall to adjust controller (e.g. with joystick override)
+    float _virtual_human_input_work;  //stores accumulated detected effort from human control
     float _desired_speed;           // desired speed in m/s
     float _desired_speed_limited;   // desired speed (above) but accel/decel limited and reduced to keep vehicle within _overshoot of line
     float _desired_turn_rate_rads;  // desired turn-rate in rad/sec (negative is counter clockwise, positive is clockwise)

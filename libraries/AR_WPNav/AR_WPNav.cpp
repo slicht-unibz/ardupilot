@@ -82,6 +82,24 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("SPEED_MIN", 6, AR_WPNav, _speed_min, 0),
 
+    // @Param: BLEND_KS
+    // @DisplayName: Spring constant for joystick input.
+    // @Description: 10,000 x gain for calculation of virtual work on user joystick input.
+    // @Units: 10^-4
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("BLEND_KS", 7, AR_WPNav, _blend_ks, 0),
+
+    // @Param: BLEND_KH
+    // @DisplayName: Joystick input proporation gain constant
+    // @Description: 1,00 x gain for calculation of virtual work on user joystick input.
+    // @Units: 10^-2
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("BLEND_KH", 8, AR_WPNav, _blend_kh, 0),    
+
     AP_GROUPEND
 };
 
@@ -177,11 +195,28 @@ bool AR_WPNav::set_current_destination(const struct Location& destination)
 }
 
 // set_lateral_acceleration_correction
-bool AR_WPNav::set_lateral_acceleration_correction(float lateral_acceleration_correction)
+bool AR_WPNav::set_lateral_acceleration_input(float lateral_acceleration_input)
 {
-    _lateral_acceleration_correction = lateral_acceleration_correction;
+    _lateral_acceleration_input = lateral_acceleration_input;
     return true;
 }
+
+bool AR_WPNav::apply_human_control()
+{
+    float k_s = (float) _blend_ks /10000.0; //spring constant
+    float k_h = (float) _blend_kh /100.0; //joystick input gain
+
+    //update_virtual_human_work
+    _virtual_human_input_work = 0.5 * k_s * pow(_lateral_acceleration_input, 2.0);
+    
+    float lateral_acceleration_control_input = k_h * _lateral_acceleration_input;
+    float correction_factor = exp(-_virtual_human_input_work);
+    
+    gcs().send_text(MAV_SEVERITY_WARNING, "In:%5.2f  u:%5.2f   Vh:%5.2f  e^(Vh):%5.2f", _lateral_acceleration_input, lateral_acceleration_control_input, _virtual_human_input_work, correction_factor);
+    _desired_lat_accel =  _desired_lat_accel * correction_factor + lateral_acceleration_control_input *(1 - correction_factor);
+    return true;
+}
+
 
 // set desired location
 bool AR_WPNav::set_desired_location(const struct Location& destination, float next_leg_bearing_cd)
@@ -380,16 +415,14 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
         // run L1 controller
         _nav_controller.set_reverse(_reversed);
 
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "_oa origin lat: %d_", _oa_origin.lat);
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "    origin lat: %d",  _origin.lat);
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "   current lat: %d",  current_loc.lat);
-        
         _nav_controller.update_waypoint(_reached_destination ? current_loc : _oa_origin, _oa_destination, _radius);
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "using L1");
     
         // retrieve lateral acceleration, heading back towards line and crosstrack error
-        _desired_lat_accel = constrain_float(_nav_controller.lateral_acceleration(), -_turn_max_mss, _turn_max_mss);
-        _desired_lat_accel += _lateral_acceleration_correction;
+        _desired_lat_accel = _nav_controller.lateral_acceleration();
+        apply_human_control();
+        _desired_lat_accel = constrain_float(_desired_lat_accel, -_turn_max_mss, _turn_max_mss);
+
+
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
         if (_reversed) {
             _desired_lat_accel *= -1.0f;
