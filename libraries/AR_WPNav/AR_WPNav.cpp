@@ -212,7 +212,7 @@ bool AR_WPNav::apply_human_control()
     float lateral_acceleration_control_input = k_h * _lateral_acceleration_input;
     float correction_factor = exp(-_virtual_human_input_work);
     
-    gcs().send_text(MAV_SEVERITY_WARNING, "In:%5.2f  u:%5.2f   Vh:%5.2f  e^(Vh):%5.2f", _lateral_acceleration_input, lateral_acceleration_control_input, _virtual_human_input_work, correction_factor);
+    // gcs().send_text(MAV_SEVERITY_WARNING, "In:%5.2f  u:%5.2f   Vh:%5.2f  e^(Vh):%5.2f", _lateral_acceleration_input, lateral_acceleration_control_input, _virtual_human_input_work, correction_factor);
     _desired_lat_accel =  _desired_lat_accel * correction_factor + lateral_acceleration_control_input *(1 - correction_factor);
     return true;
 }
@@ -421,7 +421,6 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
         _desired_lat_accel = _nav_controller.lateral_acceleration();
         apply_human_control();
         _desired_lat_accel = constrain_float(_desired_lat_accel, -_turn_max_mss, _turn_max_mss);
-
 
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
         if (_reversed) {

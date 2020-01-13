@@ -380,13 +380,18 @@ void Mode::navigate_to_waypoint()
     float desired_heading_cd = g2.wp_nav.oa_wp_bearing_cd();
     if (g2.sailboat.use_indirect_route(desired_heading_cd)) {
         // sailboats use heading controller when tacking upwind
-        desired_heading_cd = g2.sailboat.calc_heading(desired_heading_cd);
+        desired_heading_cd = g2.sailboat.calc_heading(g2.wp_nav.oa_wp_bearing_cd());
         // use pivot turn rate for tacks
         const float turn_rate = g2.sailboat.tacking() ? g2.wp_nav.get_pivot_rate() : 0.0f;
         calc_steering_to_heading(desired_heading_cd, turn_rate);
     } else {
-        // call turn rate steering controller
-        calc_steering_from_turn_rate(g2.wp_nav.get_turn_rate_rads(), desired_speed, g2.wp_nav.get_reversed());
+        if(!g2.wp_nav.use_direct_wheel_control()) {
+            // call turn rate steering controller
+            calc_steering_from_turn_rate(g2.wp_nav.get_turn_rate_rads(), desired_speed, g2.wp_nav.get_reversed());
+        } else {
+            // if controller wants to manipulate wheel angle (rather than angular rate)
+            calc_steering_from_direct_wheel_angle(g2.wp_nav.get_wheel_angle_deg());
+        }
     }
 }
 
@@ -416,6 +421,18 @@ void Mode::calc_steering_from_lateral_acceleration(float lat_accel, bool reverse
                                                                            rover.G_Dt);
     set_steering(steering_out * 4500.0f);
 }
+
+/*
+    calculate steering output given wheel angle:
+*/
+void Mode::calc_steering_from_direct_wheel_angle(float wheel_angle)
+{
+    // send final steering command to motor library
+    const float wheel_angle_conversion = 1.0/20.0; //degress to scaled non-dim servo output
+    const float steering_out = wheel_angle * wheel_angle_conversion;
+    set_steering(steering_out * 4500.0f);
+}
+
 
 // calculate steering output to drive towards desired heading
 // rate_max is a maximum turn rate in deg/s.  set to zero to use default turn rate limits

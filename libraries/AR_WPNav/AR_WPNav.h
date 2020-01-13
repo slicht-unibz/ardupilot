@@ -36,6 +36,9 @@ public:
     // get desired lateral acceleration (for reporting purposes only because will be zero during pivot turns)
     float get_lat_accel() const { return _desired_lat_accel; }
 
+    float get_wheel_angle_deg() { return  _nav_controller.get_wheel_angle_deg(); }
+    bool use_direct_wheel_control() { return _nav_controller.use_direct_wheel_control(); }    
+    
     // set current destination
     bool set_current_destination(const struct Location& destination);
 

@@ -194,15 +194,62 @@ void AP_L1_Control::_prevent_indecision(float &Nu)
     }
 }
 
+float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired)
+{
+    // constants here for now (should be parameters)
+    float K_r_SM = 25.0;
+    float Iz = 1.0;
+    float taur_max = 20.0*0.01745; //20 degrees to radians.
+    float wheel_angle_deg = 0.0;
+
+    // virtual control input: desired yaw rate:
+    float r_desired = -_lookahead_distance / (pow(cross_track_error,2) + pow(_lookahead_distance,2)) * cross_track_rate;
+
+    // forward predict desired position in order to determine the instantaneous rate of change of r_desired:
+    float cross_track_forward = cross_track_error + cross_track_rate*dt;
+    float alpha_forward = atan2f(cross_track_forward,_lookahead_distance);
+    float cross_track_rate_forward = speed_desired*sin(alpha_forward);
+    float r_desired_forward  =  -_lookahead_distance / (pow(cross_track_forward,2) + pow(_lookahead_distance,2)) * cross_track_rate_forward;
+    float r_dot_desired = (r_desired_forward - r_desired)/dt;
+    //ignoring side slip to preserve sanity.
+
+    // first order sliding term is combination of yaw angle and yaw rate errors:
+    float r_tilde = yaw_rate - r_desired;
+    float psi_tilde = bearing_error;
+    float s_sliding_mode = psi_tilde + r_tilde;
+
+    // update higher order term
+    _taur_1 += _taur_1_dot*dt;
+
+    //calculate desired torque:
+    float taur = Iz * r_dot_desired //feed forward term
+        - copysign(sqrt(fabs(K_r_SM*s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
+        +  _taur_1;  // higher order STSM element
+
+    // determine rate of change of higher order term for jerk control
+    if (fabs(taur) > taur_max) {
+        _taur_1_dot = 2*taur;
+    } else {
+        _taur_1_dot = -copysign(0.5,s_sliding_mode);
+    }
+
+    wheel_angle_deg = taur/0.01745; //radians back to degrees
+    
+    gcs().send_text(MAV_SEVERITY_WARNING, "taur:%5.2f r~:%5.2f psi~:%5.2f taur1:%5.2f DEG:%5.2f", taur, r_tilde, psi_tilde, _taur_1, wheel_angle_deg);
+    
+    return wheel_angle_deg;
+}
+
 // update L1 control for waypoint navigation
 void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min)
 {
 
+    _lookahead_distance = 5;
     struct Location _current_loc;
-    float Nu;
     float xtrackVel;
     float ltrackVel;
-
+    float Nu;
+ 
     uint32_t now = AP_HAL::micros();
     float dt = (now - _last_update_waypoint_us) * 1.0e-6f;
     if (dt > 0.1) {
@@ -210,9 +257,6 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         _L1_xtrack_i = 0.0f;
     }
     _last_update_waypoint_us = now;
-
-    // Calculate L1 gain required for specified damping
-    float K_L1 = 4.0f * _L1_damping * _L1_damping;
 
     // Get current position and velocity
     if (_ahrs.get_position(_current_loc) == false) {
@@ -235,11 +279,6 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         _groundspeed_vector = Vector2f(cosf(get_yaw()), sinf(get_yaw())) * groundSpeed;
     }
 
-    // Calculate time varying control parameters
-    // Calculate the L1 length required for specified period
-    // 0.3183099 = 1/1/pipi
-    _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
-
     // Calculate the NE position of WP B relative to WP A
     Vector2f AB = prev_WP.get_distance_NE(next_WP);
     float AB_length = AB.length();
@@ -259,6 +298,22 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     // calculate distance to target track, for reporting
     _crosstrack_error = A_air % AB;
+
+
+    // Calculate L1 gain required for specified damping
+    float K_L1 = 4.0f * _L1_damping * _L1_damping;
+    
+    // Calculate time varying control parameters
+    // Calculate the L1 length required for specified period
+    // 0.3183099 = 1/1/pipi
+    _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+    
+
+    // short circuit L1 control and hijack for STSM control.
+     if (_STSM_control) {
+        // Use constant look ahead distance
+        _L1_dist = _lookahead_distance; 
+     }
 
     //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
     //and further than L1 distance from WP A. Then use WP A as the L1 reference point
@@ -288,6 +343,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         xtrackVel = _groundspeed_vector % AB; // Velocity cross track
         ltrackVel = _groundspeed_vector * AB; // Velocity along track
         float Nu2 = atan2f(xtrackVel,ltrackVel);
+        
         //Calculate Nu1 angle (Angle to L1 reference point)
         float sine_Nu1 = _crosstrack_error/MAX(_L1_dist, 0.1f);
         //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
@@ -302,17 +358,17 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
             _L1_xtrack_i_gain_prev = _L1_xtrack_i_gain;
         } else if (fabsf(Nu1) < radians(5)) {
             _L1_xtrack_i += Nu1 * _L1_xtrack_i_gain * dt;
-
+            
             // an AHRS_TRIM_X=0.1 will drift to about 0.08 so 0.1 is a good worst-case to clip at
             _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);
         }
-
+        
         // to converge to zero we must push Nu1 harder
         Nu1 += _L1_xtrack_i;
-
+        
         Nu = Nu1 + Nu2;
         _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
-    }
+    }   
 
     _prevent_indecision(Nu);
     _last_Nu = Nu;
@@ -327,6 +383,13 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     _bearing_error = Nu; // bearing error angle (radians), +ve to left of track
 
     _data_is_stale = false; // status are correctly updated with current waypoint data
+
+    if (_STSM_control) {
+        //if using STSM control, calculate the wheel angle
+        //done in addition to L1 controller for now, just to take advantage of existing structure
+        //then ignores L1 outputs
+        _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), _bearing_error, groundSpeed);
+    } 
 }
 
 // update L1 control for loitering
@@ -481,6 +544,8 @@ void AP_L1_Control::update_heading_hold(int32_t navigation_heading_cd)
     _latAccDem = 2.0f*sinf(Nu)*VomegaA;
 
     _data_is_stale = false; // status are correctly updated with current waypoint data
+
+    
 }
 
 // update L1 control for level flight on current heading

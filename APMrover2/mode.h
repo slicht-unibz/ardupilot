@@ -159,6 +159,9 @@ protected:
     // calculate steering angle given a desired lateral acceleration
     void calc_steering_from_lateral_acceleration(float lat_accel, bool reversed = false);
 
+    // calculate steering output given a desired wheel angle
+    void calc_steering_from_direct_wheel_angle(float wheel_angle);
+    
     // calculate steering output to drive towards desired heading
     // rate_max is a maximum turn rate in deg/s.  set to zero to use default turn rate limits
     void calc_steering_to_heading(float desired_heading_cd, float rate_max_degs = 0.0f);

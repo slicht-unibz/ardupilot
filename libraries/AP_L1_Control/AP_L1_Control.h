@@ -69,6 +69,14 @@ public:
         return _data_is_stale;
     }
 
+    float get_wheel_angle_deg(void) const override {
+        return _wheel_angle_deg;
+    }
+
+    bool use_direct_wheel_control(void) const override {
+        return _STSM_control;
+    }
+    
     // this supports the NAVl1_* user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -82,6 +90,18 @@ private:
 
     // pointer to the SpdHgtControl object
     const AP_SpdHgtControl *_spdHgtControl;
+
+    // desired wheel angle for use by STSM controller
+    float _wheel_angle_deg;
+    float _wheel_angle_rad;
+
+    //STSM controller variables
+    float _taur_1_dot; //for higher order sliding mode
+    float _taur_1; //for higher order sliding mode
+    float _lookahead_distance; //for looh ahead path following
+
+    // flag to indicate whether direct wheel angle control is desired
+    bool _STSM_control = 1;
 
     // lateral acceration in m/s required to fly to the
     // L1 reference point (+ve to right)
@@ -115,7 +135,9 @@ private:
 
     // prevent indecision in waypoint tracking
     void _prevent_indecision(float &Nu);
-
+    float STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired);
+    
+    
     // integral feedback to correct crosstrack error. Used to ensure xtrack converges to zero.
     // For tuning purposes it's helpful to clear the integrator when it changes so a _prev is used
     float _L1_xtrack_i = 0;
