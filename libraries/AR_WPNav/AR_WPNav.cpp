@@ -214,6 +214,7 @@ bool AR_WPNav::apply_human_control()
     
     // gcs().send_text(MAV_SEVERITY_WARNING, "In:%5.2f  u:%5.2f   Vh:%5.2f  e^(Vh):%5.2f", _lateral_acceleration_input, lateral_acceleration_control_input, _virtual_human_input_work, correction_factor);
     _desired_lat_accel =  _desired_lat_accel * correction_factor + lateral_acceleration_control_input *(1 - correction_factor);
+    _adjusted_wheel_angle_deg = _nav_controller.get_wheel_angle_deg() * correction_factor + lateral_acceleration_control_input *(1 - correction_factor); 
     return true;
 }
 

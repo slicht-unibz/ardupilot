@@ -36,7 +36,7 @@ public:
     // get desired lateral acceleration (for reporting purposes only because will be zero during pivot turns)
     float get_lat_accel() const { return _desired_lat_accel; }
 
-    float get_wheel_angle_deg() { return  _nav_controller.get_wheel_angle_deg(); }
+    float get_wheel_angle_deg() { return _adjusted_wheel_angle_deg; }
     bool use_direct_wheel_control() { return _nav_controller.use_direct_wheel_control(); }    
     
     // set current destination
@@ -155,6 +155,7 @@ private:
     // main outputs from navigation library
     float _lateral_acceleration_input;  //used as catchall to adjust controller (e.g. with joystick override)
     float _virtual_human_input_work;  //stores accumulated detected effort from human control
+    float _adjusted_wheel_angle_deg; //apply controller effort to wheel angle as well
     float _desired_speed;           // desired speed in m/s
     float _desired_speed_limited;   // desired speed (above) but accel/decel limited and reduced to keep vehicle within _overshoot of line
     float _desired_turn_rate_rads;  // desired turn-rate in rad/sec (negative is counter clockwise, positive is clockwise)

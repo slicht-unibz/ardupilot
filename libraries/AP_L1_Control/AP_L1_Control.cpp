@@ -197,45 +197,35 @@ void AP_L1_Control::_prevent_indecision(float &Nu)
 float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired)
 {
     // constants here for now (should be parameters)
-    float K_r_SM = 25.0;
-    float Iz = 1.0;
+    float K_r_SM = 0.1;
     float taur_max = 20.0*0.01745; //20 degrees to radians.
     float wheel_angle_deg = 0.0;
 
     // virtual control input: desired yaw rate:
     float r_desired = -_lookahead_distance / (pow(cross_track_error,2) + pow(_lookahead_distance,2)) * cross_track_rate;
 
-    // forward predict desired position in order to determine the instantaneous rate of change of r_desired:
-    float cross_track_forward = cross_track_error + cross_track_rate*dt;
-    float alpha_forward = atan2f(cross_track_forward,_lookahead_distance);
-    float cross_track_rate_forward = speed_desired*sin(alpha_forward);
-    float r_desired_forward  =  -_lookahead_distance / (pow(cross_track_forward,2) + pow(_lookahead_distance,2)) * cross_track_rate_forward;
-    float r_dot_desired = (r_desired_forward - r_desired)/dt;
-    //ignoring side slip to preserve sanity.
-
     // first order sliding term is combination of yaw angle and yaw rate errors:
     float r_tilde = yaw_rate - r_desired;
     float psi_tilde = bearing_error;
-    float s_sliding_mode = psi_tilde + r_tilde;
+    float s_sliding_mode = psi_tilde + 0.5*r_tilde;
 
     // update higher order term
     _taur_1 += _taur_1_dot*dt;
 
     //calculate desired torque:
-    float taur = Iz * r_dot_desired //feed forward term
-        - copysign(sqrt(fabs(K_r_SM*s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
+    float taur = - copysign(K_r_SM*sqrt(fabs(s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
         +  _taur_1;  // higher order STSM element
 
     // determine rate of change of higher order term for jerk control
     if (fabs(taur) > taur_max) {
-        _taur_1_dot = 2*taur;
+        _taur_1_dot = -2*taur;
     } else {
-        _taur_1_dot = -copysign(0.5,s_sliding_mode);
+        _taur_1_dot = -copysign(taur_max,s_sliding_mode);
     }
 
     wheel_angle_deg = taur/0.01745; //radians back to degrees
     
-    gcs().send_text(MAV_SEVERITY_WARNING, "taur:%5.2f r~:%5.2f psi~:%5.2f taur1:%5.2f DEG:%5.2f", taur, r_tilde, psi_tilde, _taur_1, wheel_angle_deg);
+    gcs().send_text(MAV_SEVERITY_WARNING, "DEG:%5.2f", wheel_angle_deg);
     
     return wheel_angle_deg;
 }
@@ -349,6 +339,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
         sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);
         float Nu1 = asinf(sine_Nu1);
+  
 
         // compute integral error component to converge to a crosstrack of zero when traveling
         // straight but reset it when disabled or if it changes. That allows for much easier
@@ -388,7 +379,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         //if using STSM control, calculate the wheel angle
         //done in addition to L1 controller for now, just to take advantage of existing structure
         //then ignores L1 outputs
-        _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), _bearing_error, groundSpeed);
+        _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), -_bearing_error, groundSpeed);
     } 
 }
 
