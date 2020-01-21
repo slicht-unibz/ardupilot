@@ -360,15 +360,41 @@ float Mode::calc_speed_nudge(float target_speed, bool reversed)
     return target_speed + speed_nudge;
 }
 
+float Mode::apply_human_control(float controller_wheel_angle_deg)
+{
+    //UniBZ controller:
+    float k_s = g2.wp_nav.get_ks();
+    float k_h = g2.wp_nav.get_kh();
+
+    float lateral_input = 0;
+    get_pilot_desired_lateral(lateral_input);
+    lateral_input = lateral_input/127.0; //normalized, -1 to 1
+        
+    float adjusted_wheel_angle_deg = 0;
+    float lateral_control_input = 0;
+    
+    if (k_s>0) {
+        //update_virtual_human_work
+        float virtual_human_input_work = 0.5 * k_s * pow(lateral_input, 2.0);
+        lateral_control_input =  k_h * lateral_input;
+        float correction_factor = exp(-virtual_human_input_work);
+        adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
+    }
+    else {
+        adjusted_wheel_angle_deg =  k_h * lateral_input;
+            }
+
+    float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
+    gcs().send_named_float("delta",steering_correction);
+
+    return adjusted_wheel_angle_deg;
+}
+
 // high level call to navigate to waypoint
 // uses wp_nav to calculate turn rate and speed to drive along the path from origin to destination
 // this function updates _distance_to_destination
 void Mode::navigate_to_waypoint()
 {
-    // update navigation controller
-    float lateral_acceleration_input = 0;
-    get_pilot_desired_lateral(lateral_acceleration_input);
-    g2.wp_nav.set_lateral_acceleration_input(lateral_acceleration_input);
     g2.wp_nav.update(rover.G_Dt);
     _distance_to_destination = g2.wp_nav.get_distance_to_destination();
 
@@ -377,6 +403,7 @@ void Mode::navigate_to_waypoint()
     desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
     calc_throttle(desired_speed, true);
 
+    // pass wheel angle to controller
     float desired_heading_cd = g2.wp_nav.oa_wp_bearing_cd();
     if (g2.sailboat.use_indirect_route(desired_heading_cd)) {
         // sailboats use heading controller when tacking upwind
@@ -389,8 +416,10 @@ void Mode::navigate_to_waypoint()
             // call turn rate steering controller
             calc_steering_from_turn_rate(g2.wp_nav.get_turn_rate_rads(), desired_speed, g2.wp_nav.get_reversed());
         } else {
-            // if controller wants to manipulate wheel angle (rather than angular rate)
-            calc_steering_from_direct_wheel_angle(g2.wp_nav.get_wheel_angle_deg());
+            //UniBZ controller:
+            float controller_steering_angle_deg = g2.wp_nav.get_wheel_angle_deg();
+            float adjusted_steering_angle_deg = apply_human_control(controller_steering_angle_deg);
+            calc_steering_from_direct_wheel_angle(adjusted_steering_angle_deg);
         }
     }
 }
@@ -427,6 +456,7 @@ void Mode::calc_steering_from_lateral_acceleration(float lat_accel, bool reverse
 */
 void Mode::calc_steering_from_direct_wheel_angle(float wheel_angle)
 {
+    //UniBZ controller:
     // send final steering command to motor library
     const float wheel_angle_conversion = 1.0/20.0; //degress to scaled non-dim servo output
     const float steering_out = wheel_angle * wheel_angle_conversion;

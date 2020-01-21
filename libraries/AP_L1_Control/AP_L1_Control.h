@@ -101,7 +101,7 @@ private:
     float _lookahead_distance; //for looh ahead path following
 
     // flag to indicate whether direct wheel angle control is desired
-    bool _STSM_control = 1;
+    bool _STSM_control = 0;
 
     // lateral acceration in m/s required to fly to the
     // L1 reference point (+ve to right)
@@ -135,8 +135,22 @@ private:
 
     // prevent indecision in waypoint tracking
     void _prevent_indecision(float &Nu);
+
+    // Higher order sliding mode control:
     float STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired);
+    float HOSM_differentiator(float Fx,float dt);    
     
+    // Initialize HOSM estimator states to zero:
+    float _z1 = 0; float _z2 = 0; float _z3 = 0;
+    float _z1_dot = 0; float _z2_dot = 0; float _z3_dot = 0;
+
+    // parameters for HOSM:
+    AP_Float _lambda0_coeff; AP_Float _lambda1_coeff; AP_Float _lambda2_coeff;
+    AP_Float _L_hosm;
+    AP_Float _Iz;
+    AP_Float _Ktdot_SM; AP_Float _Kpsi_s_SM; AP_Float _Kr_s_SM; AP_Float _Krp_SM; AP_Float _lookahead_distance_SM; AP_Float _Ktmax_SM;
+    AP_Int8 _use_sliding_mode;
+
     
     // integral feedback to correct crosstrack error. Used to ensure xtrack converges to zero.
     // For tuning purposes it's helpful to clear the integrator when it changes so a _prev is used

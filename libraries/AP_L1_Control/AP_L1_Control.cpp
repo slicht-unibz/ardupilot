@@ -38,6 +38,116 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FRAME("LIM_BANK",   3, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
 
+    // @Param: LAMBDA0_COEFF
+    // @DisplayName: Zeroth HOSM coefficient
+    // @Description: lambda0 = LAMBDA0_COEFF * L_HOSM
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("LAMBDA0_C", 4, AP_L1_Control, _lambda0_coeff, 1.1f),
+    
+    // @Param: LAMBDA1_COEFF
+    // @DisplayName: First HOSM coefficient
+    // @Description: lambda1 = LAMBDA1_COEFF * L_HOSM^(1/2)
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("LAMBDA1_C", 5, AP_L1_Control, _lambda1_coeff, 1.5f),
+
+    // @Param: LAMBDA2_COEFF
+    // @DisplayName: Second HOSM coefficient
+    // @Description: lambda2 = LAMBDA2_COEFF * L_HOSM^(1/3)
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("LAMBDA2_C", 6, AP_L1_Control, _lambda2_coeff, 3.0f),
+    
+    // @Param: L_HOSM
+    // @DisplayName: L value for HOSM
+    // @Description: Used to generate coefficients of higher order sliding mode differentiator.
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("L_HOSM", 7, AP_L1_Control, _L_hosm, 1.0f),
+    
+    // @Param: IZ_HOSM
+    // @DisplayName: L value for HOSM
+    // @Description: Used to generate coefficients of higher order sliding mode differentiator.
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("IZ_HOSM", 8, AP_L1_Control, _Iz, 1.0f),
+
+    // @Param: KTDOT_SM
+    // @DisplayName: K_tdot value for HOSM
+    // @Description: taur_1_dot = -sign(s)*KTDOT_SM
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KTDOT_SM", 9, AP_L1_Control, _Ktdot_SM, 0.5f),
+    
+    // @Param: KPSI_S_SM
+    // @DisplayName: Kpsi_s value for HOSM
+    // @Description: s = KPSI_S_SM * psi_tilde + KR_S_SM * r_tilde
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KPSI_S_SM", 10, AP_L1_Control, _Kpsi_s_SM, 1.0f),
+
+    // @Param: KR_S_SM
+    // @DisplayName: Kr_s value for HOSM
+    // @Description: s = KPSI_S_SM * psi_tilde + KR_S_SM * r_tilde
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KR_S_SM", 11, AP_L1_Control, _Kr_s_SM, 1.0f),
+    
+
+    // @Param: KRP_SM
+    // @DisplayName: Krp value for HOSM
+    // @Description: taur = .. - sign(s) * KRP_SM * s^(0.5) ...
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KRP_SM", 12, AP_L1_Control, _Krp_SM, 1.0f),
+    
+    // @Param: LK_AHEAD
+    // @DisplayName: SM Lookhead
+    // @Description: Lookahead distance for sliding mode controller
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("LK_AHEAD", 13, AP_L1_Control,_lookahead_distance_SM, 5.0f),
+    
+   // @Param: KTMAX_SM
+    // @DisplayName: KTMAX_SM Gain
+    // @Description: taur_1_dot = KTMAX_SM * taur, if taur>taur_max
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KTMAX_SM", 14, AP_L1_Control,_Ktmax_SM, 1),
+
+    
+   // @Param: USE_SM
+    // @DisplayName: Use Sliding Mode
+    // @Description: Whether to activate sliding mode control.
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("USE_SM", 15, AP_L1_Control,_use_sliding_mode, 0),
+   
     AP_GROUPEND
 };
 
@@ -194,39 +304,59 @@ void AP_L1_Control::_prevent_indecision(float &Nu)
     }
 }
 
+float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
+{
+    //UniBZ controller:
+    // set estimator gains:
+    float lambda2 = _lambda2_coeff*pow((float)_L_hosm,1.0/3.0);
+    float lambda1 = _lambda1_coeff*pow((float)_L_hosm,0.5);
+    float lambda0 = _lambda0_coeff*_L_hosm;
+    float ff = 1.0e-4;
+
+    // update estimator states using derivative calculated at previous time step:
+    _z1 += _z1_dot*dt;
+    _z2 += _z2_dot*dt;
+    _z3 += _z3_dot*dt;
+
+    // calculate derivative of estimator states (including derivative of input):
+    _z3_dot = -lambda0*(_z3 - _z2_dot)/fabs(_z3 - _z2_dot + ff);
+    _z2_dot = -lambda1*pow(fabs(_z2 - _z1_dot),0.5)*(_z2 - _z1_dot)/fabs(_z2 - _z1_dot + ff) + _z3;
+    _z1_dot = -lambda2*pow(fabs(_z1 - Fx),2.0/3.0)*(_z1 - Fx)/fabs(_z1 - Fx + ff) + _z2;
+
+    float Fx_dot = _z1_dot;
+    
+    return Fx_dot;
+}
+    
 float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired)
 {
+    //UniBZ controller:
     // constants here for now (should be parameters)
-    float K_r_SM = 0.1;
     float taur_max = 20.0*0.01745; //20 degrees to radians.
     float wheel_angle_deg = 0.0;
-
     // virtual control input: desired yaw rate:
-    float r_desired = -_lookahead_distance / (pow(cross_track_error,2) + pow(_lookahead_distance,2)) * cross_track_rate;
-
+    float r_desired = -_lookahead_distance_SM / (pow(cross_track_error,2) + pow(_lookahead_distance_SM,2)) * cross_track_rate;
+    float r_desired_dot = HOSM_differentiator(r_desired, dt);
     // first order sliding term is combination of yaw angle and yaw rate errors:
     float r_tilde = yaw_rate - r_desired;
     float psi_tilde = bearing_error;
-    float s_sliding_mode = psi_tilde + 0.5*r_tilde;
+    float s_sliding_mode = _Kpsi_s_SM*psi_tilde + _Kr_s_SM*r_tilde;
 
     // update higher order term
     _taur_1 += _taur_1_dot*dt;
-
     //calculate desired torque:
-    float taur = - copysign(K_r_SM*sqrt(fabs(s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
+    float taur = _Iz * r_desired_dot +
+        - copysign(_Krp_SM*sqrt(fabs(s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
         +  _taur_1;  // higher order STSM element
 
     // determine rate of change of higher order term for jerk control
     if (fabs(taur) > taur_max) {
-        _taur_1_dot = -2*taur;
+        _taur_1_dot = -_Ktmax_SM*taur;
     } else {
-        _taur_1_dot = -copysign(taur_max,s_sliding_mode);
+        _taur_1_dot = -copysign(_Ktdot_SM,s_sliding_mode);
     }
-
-    wheel_angle_deg = taur/0.01745; //radians back to degrees
-    
-    gcs().send_text(MAV_SEVERITY_WARNING, "DEG:%5.2f", wheel_angle_deg);
-    
+    wheel_angle_deg = taur/0.01745; //radians back to degrees    
+    //gcs().send_text(MAV_SEVERITY_WARNING, "%5.2f Iz: %5.2f S: %5.2f T: %5.2f", wheel_angle_deg, _Iz * r_desired_dot/0.01745, -copysign(_Krp_SM*sqrt(fabs(s_sliding_mode))/0.01745,s_sliding_mode),_taur_1/0.01745);
     return wheel_angle_deg;
 }
 
@@ -239,6 +369,11 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     float xtrackVel;
     float ltrackVel;
     float Nu;
+    if (_use_sliding_mode>0) {
+        _STSM_control = 1;
+    } else {
+        _STSM_control = 0;
+    }
  
     uint32_t now = AP_HAL::micros();
     float dt = (now - _last_update_waypoint_us) * 1.0e-6f;
@@ -298,7 +433,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     // 0.3183099 = 1/1/pipi
     _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
     
-
+    //UniBZ controller:
     // short circuit L1 control and hijack for STSM control.
      if (_STSM_control) {
         // Use constant look ahead distance
@@ -375,6 +510,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     _data_is_stale = false; // status are correctly updated with current waypoint data
 
+    //UniBZ controller:
     if (_STSM_control) {
         //if using STSM control, calculate the wheel angle
         //done in addition to L1 controller for now, just to take advantage of existing structure

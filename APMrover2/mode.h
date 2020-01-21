@@ -159,6 +159,9 @@ protected:
     // calculate steering angle given a desired lateral acceleration
     void calc_steering_from_lateral_acceleration(float lat_accel, bool reversed = false);
 
+    //UniBZ controller:
+    //adjust steering control based on human input
+    float apply_human_control(float controller_wheel_angle_deg);
     // calculate steering output given a desired wheel angle
     void calc_steering_from_direct_wheel_angle(float wheel_angle);
     

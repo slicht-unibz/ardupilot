@@ -194,31 +194,6 @@ bool AR_WPNav::set_current_destination(const struct Location& destination)
     return true;
 }
 
-// set_lateral_acceleration_correction
-bool AR_WPNav::set_lateral_acceleration_input(float lateral_acceleration_input)
-{
-    _lateral_acceleration_input = lateral_acceleration_input;
-    return true;
-}
-
-bool AR_WPNav::apply_human_control()
-{
-    float k_s = (float) _blend_ks /10000.0; //spring constant
-    float k_h = (float) _blend_kh /100.0; //joystick input gain
-
-    //update_virtual_human_work
-    _virtual_human_input_work = 0.5 * k_s * pow(_lateral_acceleration_input, 2.0);
-    
-    float lateral_acceleration_control_input = k_h * _lateral_acceleration_input;
-    float correction_factor = exp(-_virtual_human_input_work);
-    
-    // gcs().send_text(MAV_SEVERITY_WARNING, "In:%5.2f  u:%5.2f   Vh:%5.2f  e^(Vh):%5.2f", _lateral_acceleration_input, lateral_acceleration_control_input, _virtual_human_input_work, correction_factor);
-    _desired_lat_accel =  _desired_lat_accel * correction_factor + lateral_acceleration_control_input *(1 - correction_factor);
-    _adjusted_wheel_angle_deg = _nav_controller.get_wheel_angle_deg() * correction_factor + lateral_acceleration_control_input *(1 - correction_factor); 
-    return true;
-}
-
-
 // set desired location
 bool AR_WPNav::set_desired_location(const struct Location& destination, float next_leg_bearing_cd)
 {
@@ -420,9 +395,9 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
     
         // retrieve lateral acceleration, heading back towards line and crosstrack error
         _desired_lat_accel = _nav_controller.lateral_acceleration();
-        apply_human_control();
-        _desired_lat_accel = constrain_float(_desired_lat_accel, -_turn_max_mss, _turn_max_mss);
 
+        // Execute 
+        _desired_lat_accel = constrain_float(_desired_lat_accel, -_turn_max_mss, _turn_max_mss);
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
         if (_reversed) {
             _desired_lat_accel *= -1.0f;
