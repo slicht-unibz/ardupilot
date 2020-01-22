@@ -394,8 +394,8 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
     
     if (k_s>0) {
         //update_virtual_human_work
-        float virtual_human_input_work = 0.5 * k_s * pow(lateral_input, 2.0);
-        float correction_factor = exp(-virtual_human_input_work);
+        float virtual_human_input_work = 0.5 * k_s * powf(lateral_input, 2.0);
+        float correction_factor = expf(-virtual_human_input_work);
         adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
     }
     else {

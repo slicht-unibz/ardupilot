@@ -308,8 +308,8 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
 {
     //UniBZ controller:
     // set estimator gains:
-    float lambda2 = _lambda2_coeff*pow((float)_L_hosm,1.0/3.0);
-    float lambda1 = _lambda1_coeff*pow((float)_L_hosm,0.5);
+    float lambda2 = _lambda2_coeff*powf((float)_L_hosm,1.0/3.0);
+    float lambda1 = _lambda1_coeff*powf((float)_L_hosm,0.5);
     float lambda0 = _lambda0_coeff*_L_hosm;
     float ff = 1.0e-4;
 
@@ -320,8 +320,8 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
 
     // calculate derivative of estimator states (including derivative of input):
     _z3_dot = -lambda0*(_z3 - _z2_dot)/fabs(_z3 - _z2_dot + ff);
-    _z2_dot = -lambda1*pow(fabs(_z2 - _z1_dot),0.5)*(_z2 - _z1_dot)/fabs(_z2 - _z1_dot + ff) + _z3;
-    _z1_dot = -lambda2*pow(fabs(_z1 - Fx),2.0/3.0)*(_z1 - Fx)/fabs(_z1 - Fx + ff) + _z2;
+    _z2_dot = -lambda1*powf(fabs(_z2 - _z1_dot),0.5)*(_z2 - _z1_dot)/fabs(_z2 - _z1_dot + ff) + _z3;
+    _z1_dot = -lambda2*powf(fabs(_z1 - Fx),2.0/3.0)*(_z1 - Fx)/fabs(_z1 - Fx + ff) + _z2;
 
     float Fx_dot = _z1_dot;
     
@@ -335,7 +335,7 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     float taur_max = 20.0*0.01745; //20 degrees to radians.
     float wheel_angle_deg = 0.0;
     // virtual control input: desired yaw rate:
-    float r_desired = -_lookahead_distance_SM / (pow(cross_track_error,2) + pow(_lookahead_distance_SM,2)) * cross_track_rate;
+    float r_desired = -_lookahead_distance_SM / (powf(cross_track_error,2) + powf(_lookahead_distance_SM,2)) * cross_track_rate;
     float r_desired_dot = HOSM_differentiator(r_desired, dt);
     // first order sliding term is combination of yaw angle and yaw rate errors:
     float r_tilde = yaw_rate - r_desired;
@@ -346,7 +346,7 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     _taur_1 += _taur_1_dot*dt;
     //calculate desired torque:
     float taur = _Iz * r_desired_dot +
-        - copysign(_Krp_SM*sqrt(fabs(s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
+        - copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
         +  _taur_1;  // higher order STSM element
 
     // determine rate of change of higher order term for jerk control

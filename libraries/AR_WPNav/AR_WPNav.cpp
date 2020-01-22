@@ -190,14 +190,12 @@ bool AR_WPNav::set_current_destination(const struct Location& destination)
 {
     _destination = _oa_destination = destination;
     _origin = _oa_destination = destination;
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV _origin lat: %d",  _origin.lat);
     return true;
 }
 
 // set desired location
 bool AR_WPNav::set_desired_location(const struct Location& destination, float next_leg_bearing_cd)
 {
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV2::origin lat: %d",  _origin.lat);        
     // if waypoint controller active, set origin to last destination
     if (is_active() && _orig_and_dest_valid && _reached_destination) {
             _origin = _destination;
@@ -207,7 +205,6 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
             return false;
         }
     }
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV3::origin lat: %d",  _origin.lat);        
 
     // initialise some variables
     _oa_origin = _origin;
@@ -215,8 +212,6 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
     _orig_and_dest_valid = true;
     _reached_destination = false;
     update_distance_and_bearing_to_destination();
-
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV4::origin lat: %d",  _origin.lat);
     
     // set final desired speed
     _desired_speed_final = 0.0f;
@@ -238,7 +233,7 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
             apply_speed_min(_desired_speed_final);
         }
     }
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "AR_WPNAV5::origin lat: %d",  _origin.lat);        
+
     
     return true;
 }

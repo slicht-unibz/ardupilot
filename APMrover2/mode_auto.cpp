@@ -554,11 +554,8 @@ bool ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd, bool always_sto
         }
         Location prevloc = prev_cmd.content.location;
         g2.wp_nav.set_current_destination(prevloc);
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "ModeAuto::do_nav_wp set destination");
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "ModeAuto::origin lat: %d",  prevloc.lat);        
     }
     
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "ModeAuto::do_nav_wp PWP: %d", prev_wp_index);    
     // retrieve and sanitize target location
     Location cmdloc = cmd.content.location;
     cmdloc.sanitize(rover.current_loc);
