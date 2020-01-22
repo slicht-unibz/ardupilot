@@ -360,33 +360,54 @@ float Mode::calc_speed_nudge(float target_speed, bool reversed)
     return target_speed + speed_nudge;
 }
 
+// decode input from RC overrides:
+void Mode::get_pilot_joystick(float &js_1, float &js_2, float &js_3, float &js_4)
+{
+    //UniBZ controller:
+     // get joystick input
+    uint16_t values[14] = {};
+    rc().get_radio_in(values, ARRAY_SIZE(values));
+    js_1 = (float) values[4];
+    js_2 = (float) values[5];
+    js_3 = (float) values[6];
+    js_4 = (float) values[7];
+
+}
+
 float Mode::apply_human_control(float controller_wheel_angle_deg)
 {
     //UniBZ controller:
     float k_s = g2.wp_nav.get_ks();
     float k_h = g2.wp_nav.get_kh();
 
+    float input_center = 1500;
+    float input_scaling = 1000;
+    
     float lateral_input = 0;
-    get_pilot_desired_lateral(lateral_input);
-    lateral_input = lateral_input/127.0; //normalized, -1 to 1
+    float js_1 = 0; float js_2 = 0; float js_3 = 0; float js_4 = 0;
+    //get_pilot_desired_lateral(lateral_input);
+    get_pilot_joystick(js_1, js_2, js_3, js_4);
+    lateral_input = (js_1-input_center)/input_scaling; //normalized, -1 to 1
         
     float adjusted_wheel_angle_deg = 0;
-    float lateral_control_input = 0;
+    float lateral_control_input = k_h * lateral_input;
     
     if (k_s>0) {
         //update_virtual_human_work
         float virtual_human_input_work = 0.5 * k_s * pow(lateral_input, 2.0);
-        lateral_control_input =  k_h * lateral_input;
         float correction_factor = exp(-virtual_human_input_work);
         adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
     }
     else {
-        adjusted_wheel_angle_deg =  k_h * lateral_input;
+        adjusted_wheel_angle_deg =  k_h * lateral_control_input;
             }
 
     float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
-    gcs().send_named_float("delta",steering_correction);
-
+    gcs().send_named_float("js_out_1",steering_correction);
+    gcs().send_named_float("js_out_2",adjusted_wheel_angle_deg);
+    gcs().send_named_float("js_out_3",controller_wheel_angle_deg);
+    gcs().send_named_float("js_out_4",lateral_input);
+        
     return adjusted_wheel_angle_deg;
 }
 

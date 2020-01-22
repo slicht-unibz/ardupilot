@@ -160,6 +160,8 @@ protected:
     void calc_steering_from_lateral_acceleration(float lat_accel, bool reversed = false);
 
     //UniBZ controller:
+    // decode input from RC overrides:
+    void get_pilot_joystick(float &js_1, float &js_2, float &js_3, float &js_4);
     //adjust steering control based on human input
     float apply_human_control(float controller_wheel_angle_deg);
     // calculate steering output given a desired wheel angle

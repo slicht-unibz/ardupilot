@@ -9,7 +9,7 @@ void Rover::set_control_channels(void)
     channel_steer    = rc().channel(rcmap.roll()-1);
     channel_throttle = rc().channel(rcmap.throttle()-1);
     channel_lateral  = rc().channel(rcmap.yaw()-1);
-
+    
     // set rc channel ranges
     channel_steer->set_angle(SERVO_MAX);
     channel_throttle->set_angle(100);
