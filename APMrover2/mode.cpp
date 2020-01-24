@@ -399,7 +399,7 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
         adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
     }
     else {
-        adjusted_wheel_angle_deg =  k_h * lateral_control_input;
+        adjusted_wheel_angle_deg =  controller_wheel_angle_deg;
             }
 
     float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;

@@ -327,6 +327,24 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
     
     return Fx_dot;
 }
+
+float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
+{
+
+    float zeta = _lambda0_coeff;
+    float wn = _lambda1_coeff;
+
+    // Filter the signals
+    _z1_dot = _z2;
+    _z2_dot = -wn*wn*_z1 - 2.0*zeta*wn*_z2 + wn*wn*Fx;
+
+    _z1 += dt*_z1_dot;
+    _z2 += dt*_z2_dot;
+
+    // Assign the output values
+    float Fx_dot = _z2;
+    return Fx_dot;
+}
     
 float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired)
 {
@@ -336,7 +354,13 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     float wheel_angle_deg = 0.0;
     // virtual control input: desired yaw rate:
     float r_desired = -_lookahead_distance_SM / (powf(cross_track_error,2) + powf(_lookahead_distance_SM,2)) * cross_track_rate;
-    float r_desired_dot = HOSM_differentiator(r_desired, dt);
+
+    float r_desired_dot = 0;
+    if (_lambda2_coeff>0) {
+        r_desired_dot = HOSM_differentiator(r_desired, dt);
+    } else {
+        r_desired_dot = linear_second_order_differentiator(r_desired, dt);
+    }
     // first order sliding term is combination of yaw angle and yaw rate errors:
     float r_tilde = yaw_rate - r_desired;
     float psi_tilde = bearing_error;

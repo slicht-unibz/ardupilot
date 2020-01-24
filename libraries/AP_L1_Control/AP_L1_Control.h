@@ -136,10 +136,13 @@ private:
     // prevent indecision in waypoint tracking
     void _prevent_indecision(float &Nu);
 
+
+    // UniBZ Controller:
     // Higher order sliding mode control:
     float STSM_wheel_control(float cross_track_error, float cross_track_rate, float dt, float yaw_rate, float bearing_error, float speed_desired);
     float HOSM_differentiator(float Fx,float dt);    
-    
+    float linear_second_order_differentiator(float Fx, float dt);
+        
     // Initialize HOSM estimator states to zero:
     float _z1 = 0; float _z2 = 0; float _z3 = 0;
     float _z1_dot = 0; float _z2_dot = 0; float _z3_dot = 0;

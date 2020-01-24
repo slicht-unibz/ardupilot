@@ -159,7 +159,9 @@ def main(win):
     
     # Connect to the vehicle.
     print("Connecting to vehicle on: %s" % (vehicle_host_port,))
-    vehicle = connect(vehicle_host_port, wait_ready=True)
+    vehicle = connect(vehicle_host_port, wait_ready=False)
+    print("Connected to Vehicle")
+
                      
     # Setup listener for navigation message:
     @vehicle.on_message('NAV_CONTROLLER_OUTPUT')
@@ -173,22 +175,33 @@ def main(win):
         if (output_name[0:7]=='js_out_'):
             output_number = int(output_name[7])
             js.vehicle_output[output_number-1] = float(message.value)
-            
+
+    debug_value = 0.1
+    joystick_attempts = 0
+    js.pos = [js.joystick_center+debug_value,js.joystick_center,js.joystick_center,js.joystick_center]
+    
     while 1:
      #   try:
         if 1:
             time.sleep(loop_delay)
 
-            # Get joystick state******************************#:
-            # Unsigned integer (command) and 4 signed integers (force data)
-            # Send and receive:
-            request = struct.pack('<Iiiii', 0xAF, js.force[0], js.force[1], js.force[2], js.force[3])
-            sock.sendto(request, (joystick_host, joystick_port))
-            response, address = sock.recvfrom(20)
-            # Read one unsigned integer(command) and 4 floats (position data)
-            result, js.pos[0], js.pos[1], js.pos[2], js.pos[3] = struct.unpack('<Iffff', response)
-            #********************************************#
-            
+            if joystick_attempts>0:
+                try:
+                    # Get joystick state******************************#:
+                    # Unsigned integer (command) and 4 signed integers (force data)
+                    # Send and receive:
+                    request = struct.pack('<Iiiii', 0xAF, js.force[0], js.force[1], js.force[2], js.force[3])
+                    sock.sendto(request, (joystick_host, joystick_port))
+                    response, address = sock.recvfrom(20)
+                    # Read one unsigned integer(command) and 4 floats (position data)
+                    result, js.pos[0], js.pos[1], js.pos[2], js.pos[3] = struct.unpack('<Iffff', response)
+                    #********************************************#
+                except Exception as e:
+                    print('Joystick Comm Failure: Values May Be Set Locally')
+                    joystick_attempts += -1
+            else:
+                js.pos = [js.joystick_center+debug_value,js.joystick_center,js.joystick_center,js.joystick_center]
+                
             #**************************************************#
             # Apply controller to vehicle output:
             js.calc_controller_output()
@@ -218,6 +231,11 @@ def main(win):
             # check for keyboard input, quit if 'enter' key hit:
             try:
                 key = win.getkey()
+                if key == 'KEY_UP':
+                    debug_value += 0.1
+                    print('Key Up')
+                if key == 'KEY_DOWN':
+                    debug_value += -0.1
                 if key == os.linesep:
                     #Clear overrides and close vehicle object before exiting script
                     vehicle.channels.overrides = {}
@@ -227,6 +245,7 @@ def main(win):
             except Exception as e:
                 # No input
                 # resend joystick input to keep it from expiring
+                print('nope')
                 pass
             
 curses.wrapper(main)
