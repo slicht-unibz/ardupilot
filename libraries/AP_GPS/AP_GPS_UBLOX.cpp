@@ -571,26 +571,49 @@ void AP_GPS_UBLOX::log_relposned(void)
         return;
     }
 
+    //UniBZ controller:
     switch(state.instance){
     case 0:
-        AP::logger().Write("UBR1", "TimeUS,Instance,relPosN,relPosE,relPosD,relPosLength,relPosHeading", "QBiiiii", 
+        AP::logger().Write("UBR1", "TimeUS,Instance,relPosN,relPosE,relPosD, relPosHPN,relPosHPE,relPosHPD,relPosLength,relPosHeading,relPosHPLength,accN,accE,accD,accLength,accHeading,flags,iTOW", "QBiiiiiiiiiiiiiiiii", 
                            AP_HAL::micros64(),
                            (uint8_t)state.instance,
                            (int32_t)_buffer.relposned.relPosN,
                            (int32_t)_buffer.relposned.relPosE,
                            (int32_t)_buffer.relposned.relPosD,
-                           (int32_t)_buffer.relposned.relPosLength,
-                           (int32_t) _buffer.relposned.relPosHeading);
+                           (int8_t)_buffer.relposned.relPosHPN,
+                           (int8_t)_buffer.relposned.relPosHPE,
+                           (int8_t)_buffer.relposned.relPosHPD,
+                           (int8_t)_buffer.relposned.relPosLength,
+                           (int32_t)_buffer.relposned.relPosHeading,
+                           (int32_t)_buffer.relposned.relPosHPLength,
+                           (uint32_t)_buffer.relposned.accN,
+                           (uint32_t)_buffer.relposned.accE,
+                           (uint32_t)_buffer.relposned.accD,
+                           (uint32_t)_buffer.relposned.accLength,
+                           (uint32_t)_buffer.relposned.accHeading,
+                           (uint32_t)_buffer.relposned.flags,
+                           (uint16_t)_buffer.relposned.iTOW);
         break;
     case 1:
-        AP::logger().Write("UBR2", "TimeUS,Instance,relPosN,relPosE,relPosD,relPosLength,relPosHeading", "QBiiiii", 
+                AP::logger().Write("UBR2", "TimeUS,Instance,relPosN,relPosE,relPosD, relPosHPN,relPosHPE,relPosHPD,relPosLength,relPosHeading,relPosHPLength,accN,accE,accD,accLength,accHeading,flags,iTOW", "QBiiiiiiiiiiiiiiiii", 
                            AP_HAL::micros64(),
                            (uint8_t)state.instance,
                            (int32_t)_buffer.relposned.relPosN,
                            (int32_t)_buffer.relposned.relPosE,
                            (int32_t)_buffer.relposned.relPosD,
-                           (int32_t)_buffer.relposned.relPosLength,
-                           (int32_t) _buffer.relposned.relPosHeading);
+                           (int8_t)_buffer.relposned.relPosHPN,
+                           (int8_t)_buffer.relposned.relPosHPE,
+                           (int8_t)_buffer.relposned.relPosHPD,
+                           (int8_t)_buffer.relposned.relPosLength,
+                           (int32_t)_buffer.relposned.relPosHeading,
+                           (int32_t)_buffer.relposned.relPosHPLength,
+                           (uint32_t)_buffer.relposned.accN,
+                           (uint32_t)_buffer.relposned.accE,
+                           (uint32_t)_buffer.relposned.accD,
+                           (uint32_t)_buffer.relposned.accLength,
+                           (uint32_t)_buffer.relposned.accHeading,
+                           (uint32_t)_buffer.relposned.flags,
+                           (uint16_t)_buffer.relposned.iTOW);
         break;
     }
 
