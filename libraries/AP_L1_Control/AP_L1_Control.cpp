@@ -354,14 +354,14 @@ float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
     // Assign the output values
     float Fx_dot = _z2;
 
-    AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "QBiiiiii", 
+    AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "QBffffff", 
                        AP_HAL::micros64(),
-                       (int32_t)Fx*10e3,
-                       (int32_t)dt*10e3,
-                       (int32_t)_z1*10e3,
-                       (int32_t)_z2*10e3,
-                       (int32_t)_z1_dot*10e3,
-                       (int32_t)_z2_dot*10e3);
+                       (double)Fx,
+                       (double)dt,
+                       (double)_z1,
+                       (double)_z2,
+                       (double)_z1_dot,
+                       (double)_z2_dot);
     return Fx_dot;
 }
     
@@ -402,9 +402,9 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     AP::logger().Write("HSM1","TimeUS,wheelCMD,firstORD,secondORD", "QBffff", 
                        AP_HAL::micros64(),
                        (double)wheel_angle_deg,
-                       (double)_Iz * r_desired_dot, 
-                       (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode))/0.01745,s_sliding_mode),
-                       (double)_taur_1);
+                       (double)_Iz * r_desired_dot/0.01745f, 
+                       (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode))/0.01745f,s_sliding_mode),
+                       (double)_taur_1/0.01745f);
 
     return wheel_angle_deg;
 }
@@ -418,6 +418,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     float xtrackVel;
     float ltrackVel;
     float Nu;
+    
     if (_use_sliding_mode>0) {
         _STSM_control = 1;
     } else {
@@ -472,100 +473,124 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     // calculate distance to target track, for reporting
     _crosstrack_error = A_air % AB;
-
-
-    // Calculate L1 gain required for specified damping
-    float K_L1 = 4.0f * _L1_damping * _L1_damping;
-    
-    // Calculate time varying control parameters
-    // Calculate the L1 length required for specified period
-    // 0.3183099 = 1/1/pipi
-    _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
-    
-    //UniBZ controller:
-    // short circuit L1 control and hijack for STSM control.
-     if (_STSM_control) {
-        // Use constant look ahead distance
-        _L1_dist = _lookahead_distance; 
-     }
-
-    //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
-    //and further than L1 distance from WP A. Then use WP A as the L1 reference point
-    //Otherwise do normal L1 guidance
     float WP_A_dist = A_air.length();
     float alongTrackDist = A_air * AB;
-    if (WP_A_dist > _L1_dist && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)
-    {
-        //Calc Nu to fly To WP A
-        Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft
-        xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line
-        ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
-        Nu = atan2f(xtrackVel,ltrackVel);
-        _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
-    } else if (alongTrackDist > AB_length + groundSpeed*3) {
-        // we have passed point B by 3 seconds. Head towards B
-        // Calc Nu to fly To WP B
-        const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
-        Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft
-        xtrackVel = _groundspeed_vector % (-B_air_unit); // Velocity across line
-        ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line
-        Nu = atan2f(xtrackVel,ltrackVel);
-        _nav_bearing = atan2f(-B_air_unit.y , -B_air_unit.x); // bearing (radians) from AC to L1 point
-    } else { //Calc Nu to fly along AB line
-
-        //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
-        xtrackVel = _groundspeed_vector % AB; // Velocity cross track
-        ltrackVel = _groundspeed_vector * AB; // Velocity along track
-        float Nu2 = atan2f(xtrackVel,ltrackVel);
-        
-        //Calculate Nu1 angle (Angle to L1 reference point)
-        float sine_Nu1 = _crosstrack_error/MAX(_L1_dist, 0.1f);
-        //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
-        sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);
-        float Nu1 = asinf(sine_Nu1);
-  
-
-        // compute integral error component to converge to a crosstrack of zero when traveling
-        // straight but reset it when disabled or if it changes. That allows for much easier
-        // tuning by having it re-converge each time it changes.
-        if (_L1_xtrack_i_gain <= 0 || !is_equal(_L1_xtrack_i_gain.get(), _L1_xtrack_i_gain_prev)) {
-            _L1_xtrack_i = 0;
-            _L1_xtrack_i_gain_prev = _L1_xtrack_i_gain;
-        } else if (fabsf(Nu1) < radians(5)) {
-            _L1_xtrack_i += Nu1 * _L1_xtrack_i_gain * dt;
-            
-            // an AHRS_TRIM_X=0.1 will drift to about 0.08 so 0.1 is a good worst-case to clip at
-            _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);
-        }
-        
-        // to converge to zero we must push Nu1 harder
-        Nu1 += _L1_xtrack_i;
-        
-        Nu = Nu1 + Nu2;
-        _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
-    }   
-
-    _prevent_indecision(Nu);
-    _last_Nu = Nu;
-
-    //Limit Nu to +-(pi/2)
-    Nu = constrain_float(Nu, -1.5708f, +1.5708f);
-    _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
-
-    // Waypoint capture status is always false during waypoint following
-    _WPcircle = false;
-
-    _bearing_error = Nu; // bearing error angle (radians), +ve to left of track
-
-    _data_is_stale = false; // status are correctly updated with current waypoint data
 
     //UniBZ controller:
-    if (_STSM_control) {
+     if (_STSM_control) {
+         //Go direct to waypoint if past 135 degree cone:
+        if (WP_A_dist > _lookahead_distance && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)
+            {
+                //Calc Nu to fly To WP A
+                Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft
+                xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line
+                ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
+                _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
+            } else
+            if (alongTrackDist > AB_length + groundSpeed*3) {
+                // we have passed point B by 3 seconds. Head towards B
+                // Calc Nu to fly To WP B
+                const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
+                Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft
+                xtrackVel = _groundspeed_vector % (-B_air_unit); // Velocity across line
+                ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line
+                _nav_bearing = atan2f(-B_air_unit.y , -B_air_unit.x); // bearing (radians) from AC to L1 point
+            } else {
+                //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
+                xtrackVel = _groundspeed_vector % AB; // Velocity cross track
+                ltrackVel = _groundspeed_vector * AB; // Velocity along track
+                float sine_Nu1 = _crosstrack_error/MAX(_lookahead_distance, 0.1f);
+                //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
+                float Nu1 = asinf(constrain_float(sine_Nu1, -0.7071f, 0.7071f));
+                _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
+            }
+
+        _bearing_error = _nav_bearing - get_yaw();
         //if using STSM control, calculate the wheel angle
-        //done in addition to L1 controller for now, just to take advantage of existing structure
-        //then ignores L1 outputs
-        _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), -_bearing_error, groundSpeed);
-    } 
+        _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), _bearing_error, groundSpeed);
+     }
+     
+     else {
+         //Original L1 Control
+         // Calculate L1 gain required for specified damping
+         float K_L1 = 4.0f * _L1_damping * _L1_damping;
+         
+         // Calculate time varying control parameters
+         // Calculate the L1 length required for specified period
+         // 0.3183099 = 1/1/pipi
+         _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+        
+         //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
+         //and further than L1 distance from WP A. Then use WP A as the L1 reference point
+         //Otherwise do normal L1 guidance
+         float WP_A_dist = A_air.length();
+         float alongTrackDist = A_air * AB;
+         if (WP_A_dist > _L1_dist && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)
+             {
+                 //Calc Nu to fly To WP A
+                 Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft
+                 xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line
+                 ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
+                 Nu = atan2f(xtrackVel,ltrackVel);
+                 _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
+             } else
+             if (alongTrackDist > AB_length + groundSpeed*3) {
+                 // we have passed point B by 3 seconds. Head towards B
+                 // Calc Nu to fly To WP B
+                 const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
+                 Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft
+                 xtrackVel = _groundspeed_vector % (-B_air_unit); // Velocity across line
+                 ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line
+                 Nu = atan2f(xtrackVel,ltrackVel);
+                 _nav_bearing = atan2f(-B_air_unit.y , -B_air_unit.x); // bearing (radians) from AC to L1 point
+                 
+             } else { //Calc Nu to fly along AB line
+                 
+                 //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
+                 xtrackVel = _groundspeed_vector % AB; // Velocity cross track
+                 ltrackVel = _groundspeed_vector * AB; // Velocity along track
+                 float Nu2 = atan2f(xtrackVel,ltrackVel);
+                 
+                 //Calculate Nu1 angle (Angle to L1 reference point)
+                 float sine_Nu1 = _crosstrack_error/MAX(_L1_dist, 0.1f);
+                 //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
+                 sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);
+                 float Nu1 = asinf(sine_Nu1);
+                 
+                 // compute integral error component to converge to a crosstrack of zero when traveling
+                 // straight but reset it when disabled or if it changes. That allows for much easier
+                 // tuning by having it re-converge each time it changes.
+                 if (_L1_xtrack_i_gain <= 0 || !is_equal(_L1_xtrack_i_gain.get(), _L1_xtrack_i_gain_prev)) {
+                     _L1_xtrack_i = 0;
+                     _L1_xtrack_i_gain_prev = _L1_xtrack_i_gain;
+                 } else if (fabsf(Nu1) < radians(5)) {
+                     _L1_xtrack_i += Nu1 * _L1_xtrack_i_gain * dt;
+                     
+                     // an AHRS_TRIM_X=0.1 will drift to about 0.08 so 0.1 is a good worst-case to clip at
+                     _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);
+                 }
+                 
+                 // to converge to zero we must push Nu1 harder
+                 Nu1 += _L1_xtrack_i;
+                 
+                 Nu = Nu1 + Nu2;
+                 _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
+             }   
+
+         _prevent_indecision(Nu);
+         _last_Nu = Nu;
+         
+         //Limit Nu to +-(pi/2)
+         Nu = constrain_float(Nu, -1.5708f, +1.5708f);
+         _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+
+         // Waypoint capture status is always false during waypoint following
+         _WPcircle = false;
+         
+         _bearing_error = Nu; // bearing error angle (radians), +ve to left of track
+         
+         _data_is_stale = false; // status are correctly updated with current waypoint data
+     }
 }
 
 // update L1 control for loitering
@@ -581,7 +606,7 @@ void AP_L1_Control::update_loiter(const struct Location &center_WP, float radius
     float omega = (6.2832f / _L1_period);
     float Kx = omega * omega;
     float Kv = 2.0f * _L1_damping * omega;
-
+1
     // Calculate L1 gain required for specified damping (used during waypoint capture)
     float K_L1 = 4.0f * _L1_damping * _L1_damping;
 
