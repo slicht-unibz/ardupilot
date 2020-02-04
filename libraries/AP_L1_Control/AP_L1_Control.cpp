@@ -324,7 +324,17 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
     _z1_dot = -lambda2*powf(fabs(_z1 - Fx),2.0/3.0)*(_z1 - Fx)/fabs(_z1 - Fx + ff) + _z2;
 
     float Fx_dot = _z1_dot;
-    
+
+    AP::logger().Write("HSM3","TimeUS,Fx,dt,z1,z2,z3,z1_dot,z2_dot,z3_dot", "QBiiiiiiii", 
+                       AP_HAL::micros64(),
+                       (int32_t)Fx*10e3,
+                       (int32_t)dt*10e3,
+                       (int32_t)_z1*10e3,
+                       (int32_t)_z2*10e3,
+                       (int32_t)_z3*10e3,
+                       (int32_t)_z1_dot*10e3,
+                       (int32_t)_z2_dot*10e3,
+                       (int32_t)_z3_dot*10e3);
     return Fx_dot;
 }
 
@@ -343,6 +353,15 @@ float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
 
     // Assign the output values
     float Fx_dot = _z2;
+
+    AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "QBiiiiii", 
+                       AP_HAL::micros64(),
+                       (int32_t)Fx*10e3,
+                       (int32_t)dt*10e3,
+                       (int32_t)_z1*10e3,
+                       (int32_t)_z2*10e3,
+                       (int32_t)_z1_dot*10e3,
+                       (int32_t)_z2_dot*10e3);
     return Fx_dot;
 }
     
@@ -379,8 +398,14 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     } else {
         _taur_1_dot = -copysign(_Ktdot_SM,s_sliding_mode);
     }
-    wheel_angle_deg = taur/0.01745; //radians back to degrees    
-    //gcs().send_text(MAV_SEVERITY_WARNING, "%5.2f Iz: %5.2f S: %5.2f T: %5.2f", wheel_angle_deg, _Iz * r_desired_dot/0.01745, -copysign(_Krp_SM*sqrt(fabs(s_sliding_mode))/0.01745,s_sliding_mode),_taur_1/0.01745);
+    wheel_angle_deg = taur/0.01745; //radians back to degrees
+    AP::logger().Write("HSM1","TimeUS,wheelCMD,firstORD,secondORD", "QBffff", 
+                       AP_HAL::micros64(),
+                       (double)wheel_angle_deg,
+                       (double)_Iz * r_desired_dot, 
+                       (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode))/0.01745,s_sliding_mode),
+                       (double)_taur_1);
+
     return wheel_angle_deg;
 }
 
