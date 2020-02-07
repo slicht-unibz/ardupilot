@@ -571,35 +571,28 @@ void AP_GPS_UBLOX::log_relposned(void)
         return;
     }
     //UniBZ controller:
-    AP::logger().Write("UBR1","TimeUS,Instance,relPosN,relPosE,relPosD", "QBiiii", 
+    AP::logger().Write("UBR1","TimeUS,Instance,relPosN,relPosE,relPosD", "QBiii", 
                        AP_HAL::micros64(),
                        (uint8_t)state.instance,
                        (int32_t)_buffer.relposned.relPosN,
                        (int32_t)_buffer.relposned.relPosE,
                        (int32_t)_buffer.relposned.relPosD);
 
-    AP::logger().Write("UBR2","TimeUS,Instance,relPosHPN,relPosHPE,relPosHPD", "QBiiii", 
+    AP::logger().Write("UBR2","TimeUS,Instance,relPosHPN,relPosHPE,relPosHPD", "QBiii", 
                        AP_HAL::micros64(),
                        (uint8_t)state.instance,
                        (int8_t)_buffer.relposned.relPosHPN,
                        (int8_t)_buffer.relposned.relPosHPE,
                        (int8_t)_buffer.relposned.relPosHPD);
         
-    AP::logger().Write("UBR3","TimeUS,Instance,relL,relHPL,relHead","QBiiii", 
+    AP::logger().Write("UBR3","TimeUS,Instance,relL,relHPL,relHead","QBiii", 
                        AP_HAL::micros64(),
                        (uint8_t)state.instance,
                        (int8_t)_buffer.relposned.relPosLength,
                        (int32_t)_buffer.relposned.relPosHPLength,
-                       (int32_t)_buffer.relposned.relPosHeading,
-                       (uint32_t)_buffer.relposned.accN,
-                       (uint32_t)_buffer.relposned.accE,
-                       (uint32_t)_buffer.relposned.accD,
-                       (uint32_t)_buffer.relposned.accLength,
-                       (uint32_t)_buffer.relposned.accHeading,
-                       (uint32_t)_buffer.relposned.flags,
-                       (uint16_t)_buffer.relposned.iTOW);
+                       (int32_t)_buffer.relposned.relPosHeading);
 
-    AP::logger().Write("UBR4", "TimeUS,Instance,accN,accE,accD,accL,accHdg,flags,iTOW", "QBiiiiiiii", 
+    AP::logger().Write("UBR4", "TimeUS,Instance,accN,accE,accD,accL,accHdg,flags,iTOW", "QBiiiiiii", 
                        AP_HAL::micros64(),
                        (uint8_t)state.instance,
                        (uint32_t)_buffer.relposned.accN,
