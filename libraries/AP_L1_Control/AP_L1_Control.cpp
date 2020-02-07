@@ -45,7 +45,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LAMBDA0_C", 4, AP_L1_Control, _lambda0_coeff, 1.1f),
+    AP_GROUPINFO("LAMBDA0_C_SM", 4, AP_L1_Control, _lambda0_coeff, 1.1f),
     
     // @Param: LAMBDA1_COEFF
     // @DisplayName: First HOSM coefficient
@@ -54,7 +54,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LAMBDA1_C", 5, AP_L1_Control, _lambda1_coeff, 1.5f),
+    AP_GROUPINFO("LAMBDA1_C_SM", 5, AP_L1_Control, _lambda1_coeff, 1.5f),
 
     // @Param: LAMBDA2_COEFF
     // @DisplayName: Second HOSM coefficient
@@ -63,25 +63,34 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LAMBDA2_C", 6, AP_L1_Control, _lambda2_coeff, 3.0f),
+    AP_GROUPINFO("LAMBDA2_C_SM", 6, AP_L1_Control, _lambda2_coeff, 3.0f),
     
-    // @Param: L_HOSM
+    // @Param: L_SM
     // @DisplayName: L value for HOSM
     // @Description: Used to generate coefficients of higher order sliding mode differentiator.
     // @Units: 1
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("L_HOSM", 7, AP_L1_Control, _L_hosm, 1.0f),
+    AP_GROUPINFO("L_SM", 7, AP_L1_Control, _L_hosm, 1.0f),
     
-    // @Param: IZ_HOSM
+    // @Param: IZ_SM
     // @DisplayName: L value for HOSM
     // @Description: Used to generate coefficients of higher order sliding mode differentiator.
     // @Units: 1
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("IZ_HOSM", 8, AP_L1_Control, _Iz, 1.0f),
+    AP_GROUPINFO("IZ_SM", 8, AP_L1_Control, _Iz, 1.0f),
+
+    // @Param: KDELTA_PHI
+    // @DisplayName:
+    // @Description: if non-zero, adds '_Kdelta_phi_SM * yaw_rate' to wheel command
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KDELTA_PHI_SM", 9, AP_L1_Control, _Kdelta_phi_SM, 0.1f),
 
     // @Param: KTDOT_SM
     // @DisplayName: K_tdot value for HOSM
@@ -90,7 +99,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("KTDOT_SM", 9, AP_L1_Control, _Ktdot_SM, 0.5f),
+    AP_GROUPINFO("KTDOT_SM", 10, AP_L1_Control, _Ktdot_SM, 0.5f),
     
     // @Param: KPSI_S_SM
     // @DisplayName: Kpsi_s value for HOSM
@@ -99,7 +108,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("KPSI_S_SM", 10, AP_L1_Control, _Kpsi_s_SM, 1.0f),
+    AP_GROUPINFO("KPSI_S_SM", 11, AP_L1_Control, _Kpsi_s_SM, 1.0f),
 
     // @Param: KR_S_SM
     // @DisplayName: Kr_s value for HOSM
@@ -108,9 +117,8 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("KR_S_SM", 11, AP_L1_Control, _Kr_s_SM, 1.0f),
+    AP_GROUPINFO("KR_S_SM", 12, AP_L1_Control, _Kr_s_SM, 1.0f),
     
-
     // @Param: KRP_SM
     // @DisplayName: Krp value for HOSM
     // @Description: taur = .. - sign(s) * KRP_SM * s^(0.5) ...
@@ -118,7 +126,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("KRP_SM", 12, AP_L1_Control, _Krp_SM, 1.0f),
+    AP_GROUPINFO("KRP_SM", 13, AP_L1_Control, _Krp_SM, 1.0f),
     
     // @Param: LK_AHEAD
     // @DisplayName: SM Lookhead
@@ -127,7 +135,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LK_AHEAD", 13, AP_L1_Control,_lookahead_distance_SM, 5.0f),
+    AP_GROUPINFO("LK_AHEAD_SM", 14, AP_L1_Control,_lookahead_distance_SM, 5.0f),
     
    // @Param: KTMAX_SM
     // @DisplayName: KTMAX_SM Gain
@@ -136,8 +144,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("KTMAX_SM", 14, AP_L1_Control,_Ktmax_SM, 1),
-
+    AP_GROUPINFO("KTMAX_SM", 15, AP_L1_Control,_Ktmax_SM, 1),
     
    // @Param: USE_SM
     // @DisplayName: Use Sliding Mode
@@ -146,7 +153,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("USE_SM", 15, AP_L1_Control,_use_sliding_mode, 0),
+    AP_GROUPINFO("USE_SM", 16, AP_L1_Control,_use_sliding_mode, 0),
    
     AP_GROUPEND
 };
@@ -325,7 +332,7 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
 
     float Fx_dot = _z1_dot;
 
-    AP::logger().Write("HSM3","TimeUS,Fx,dt,z1,z2,z3,z1_dot,z2_dot,z3_dot", "QBiiiiiiii", 
+    AP::logger().Write("HSM3","TimeUS,Fx,dt,z1,z2,z3,z1_dot,z2_dot,z3_dot", "Qiiiiiiii", 
                        AP_HAL::micros64(),
                        (int32_t)Fx*10e3,
                        (int32_t)dt*10e3,
@@ -343,7 +350,7 @@ float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
 
     float zeta = _lambda0_coeff;
     float wn = _lambda1_coeff;
-
+    
     // Filter the signals
     _z1_dot = _z2;
     _z2_dot = -wn*wn*_z1 - 2.0*zeta*wn*_z2 + wn*wn*Fx;
@@ -354,14 +361,14 @@ float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
     // Assign the output values
     float Fx_dot = _z2;
 
-    AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "QBffffff", 
-                       AP_HAL::micros64(),
-                       (double)Fx,
-                       (double)dt,
-                       (double)_z1,
-                       (double)_z2,
-                       (double)_z1_dot,
-                       (double)_z2_dot);
+       AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "Qffffff", 
+                          AP_HAL::micros64(),
+                          (double)Fx,
+                          (double)dt,
+                          (double)_z1,
+                          (double)_z2,
+                          (double)_z1_dot,
+                          (double)_z2_dot);
     return Fx_dot;
 }
     
@@ -372,7 +379,7 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     float taur_max = 20.0*0.01745; //20 degrees to radians.
     float wheel_angle_deg = 0.0;
     // virtual control input: desired yaw rate:
-    float r_desired = -_lookahead_distance_SM / (powf(cross_track_error,2) + powf(_lookahead_distance_SM,2)) * cross_track_rate;
+    float r_desired = _lookahead_distance_SM / (powf(cross_track_error,2) + powf(_lookahead_distance_SM,2)) * cross_track_rate;
 
     float r_desired_dot = 0;
     if (_lambda2_coeff>0) {
@@ -387,8 +394,10 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
 
     // update higher order term
     _taur_1 += _taur_1_dot*dt;
+
     //calculate desired torque:
-    float taur = _Iz * r_desired_dot +
+    float taur = _Iz * r_desired_dot //torque feedforward (computed torque to follow desired trajectory)
+        +   _Kdelta_phi_SM * yaw_rate //kinematic feedforward (zero torque angle at current yaw rate)
         - copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode)),s_sliding_mode)  //standard sliding mode term
         +  _taur_1;  // higher order STSM element
 
@@ -399,12 +408,24 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
         _taur_1_dot = -copysign(_Ktdot_SM,s_sliding_mode);
     }
     wheel_angle_deg = taur/0.01745; //radians back to degrees
-    AP::logger().Write("HSM1","TimeUS,wheelCMD,firstORD,secondORD", "QBffff", 
+    wheel_angle_deg = constrain_float(wheel_angle_deg,-20.0f, 20.0f);
+
+    AP::logger().Write("HSM1","TimeUS,wheelCMD,term1,term2,term3,term4,s", "Qffffff", 
                        AP_HAL::micros64(),
                        (double)wheel_angle_deg,
-                       (double)_Iz * r_desired_dot/0.01745f, 
-                       (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode))/0.01745f,s_sliding_mode),
-                       (double)_taur_1/0.01745f);
+                       (double)_Iz * r_desired_dot/0.01745f,
+                       (double)_Kdelta_phi_SM * yaw_rate/0.01745f,
+                       (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode)),s_sliding_mode)/0.01745f,
+                       (double)_taur_1/0.01745f,
+                       (double)s_sliding_mode);
+
+    AP::logger().Write("HSM0","TimeUS,xErr,degErr,xErrD,degD", "Qffff", 
+                       AP_HAL::micros64(),
+                       (double)cross_track_error,
+                       (double)bearing_error/0.01745f, 
+                       (double)cross_track_rate,
+                       (double)yaw_rate/0.01745f);
+
 
     return wheel_angle_deg;
 }
@@ -413,7 +434,7 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
 void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min)
 {
 
-    _lookahead_distance = 5;
+    _lookahead_distance = _lookahead_distance_SM;
     struct Location _current_loc;
     float xtrackVel;
     float ltrackVel;
@@ -430,6 +451,11 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     if (dt > 0.1) {
         dt = 0.1;
         _L1_xtrack_i = 0.0f;
+        _z1 = 0;
+        _z2 = 0;
+        _z1_dot = 0;
+        _z2_dot = 0;
+        _taur_1_dot = 0;
     }
     _last_update_waypoint_us = now;
 
@@ -473,41 +499,26 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     // calculate distance to target track, for reporting
     _crosstrack_error = A_air % AB;
-    float WP_A_dist = A_air.length();
-    float alongTrackDist = A_air * AB;
 
     //UniBZ controller:
      if (_STSM_control) {
-         //Go direct to waypoint if past 135 degree cone:
-        if (WP_A_dist > _lookahead_distance && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)
-            {
-                //Calc Nu to fly To WP A
-                Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft
-                xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line
-                ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
-                _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
-            } else
-            if (alongTrackDist > AB_length + groundSpeed*3) {
-                // we have passed point B by 3 seconds. Head towards B
-                // Calc Nu to fly To WP B
-                const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
-                Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft
-                xtrackVel = _groundspeed_vector % (-B_air_unit); // Velocity across line
-                ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line
-                _nav_bearing = atan2f(-B_air_unit.y , -B_air_unit.x); // bearing (radians) from AC to L1 point
-            } else {
-                //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
-                xtrackVel = _groundspeed_vector % AB; // Velocity cross track
-                ltrackVel = _groundspeed_vector * AB; // Velocity along track
-                float sine_Nu1 = _crosstrack_error/MAX(_lookahead_distance, 0.1f);
-                //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
-                float Nu1 = asinf(constrain_float(sine_Nu1, -0.7071f, 0.7071f));
-                _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
-            }
+         
+         //float WP_A_dist = A_air.length();
+         //float alongTrackDist = A_air * AB;
 
-        _bearing_error = _nav_bearing - get_yaw();
-        //if using STSM control, calculate the wheel angle
-        _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), _bearing_error, groundSpeed);
+         //Calculate angle of velocity vector relative to line connecting waypoints:
+         xtrackVel = _groundspeed_vector % AB; // Velocity cross track
+         ltrackVel = _groundspeed_vector * AB; // Velocity along track
+         float sine_Nu1 = _crosstrack_error/MAX(_lookahead_distance, 0.1f);
+         
+         //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
+         float Nu1 = asinf(constrain_float(sine_Nu1, -0.7071f, 0.7071f));
+         _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
+         _bearing_error = wrap_PI(get_yaw() - _nav_bearing);
+          //_bearing_error = constrain_float(_bearing_error, -1.5708f, +1.5708f);
+          
+          //if using STSM control, calculate the wheel angle
+          _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), _bearing_error, groundSpeed);
      }
      
      else {
@@ -606,7 +617,7 @@ void AP_L1_Control::update_loiter(const struct Location &center_WP, float radius
     float omega = (6.2832f / _L1_period);
     float Kx = omega * omega;
     float Kv = 2.0f * _L1_damping * omega;
-1
+
     // Calculate L1 gain required for specified damping (used during waypoint capture)
     float K_L1 = 4.0f * _L1_damping * _L1_damping;
 

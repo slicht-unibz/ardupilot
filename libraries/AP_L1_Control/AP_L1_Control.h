@@ -151,7 +151,9 @@ private:
     AP_Float _lambda0_coeff; AP_Float _lambda1_coeff; AP_Float _lambda2_coeff;
     AP_Float _L_hosm;
     AP_Float _Iz;
-    AP_Float _Ktdot_SM; AP_Float _Kpsi_s_SM; AP_Float _Kr_s_SM; AP_Float _Krp_SM; AP_Float _lookahead_distance_SM; AP_Float _Ktmax_SM;
+    AP_Float _Ktdot_SM; AP_Float _Kpsi_s_SM; AP_Float _Kr_s_SM;
+    AP_Float _Krp_SM; AP_Float _lookahead_distance_SM; AP_Float _Ktmax_SM;
+    AP_Float _Kdelta_phi_SM;
     AP_Int8 _use_sliding_mode;
 
     
