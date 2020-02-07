@@ -17,6 +17,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include "AR_AttitudeControl.h"
 #include <AP_GPS/AP_GPS.h>
+//#include <AP_L1_Control/AP_L1_Control.h> // Added this here for differentiator
 
 extern const AP_HAL::HAL& hal;
 
@@ -334,6 +335,68 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Units: Hz
     // @User: Standard
     AP_SUBGROUPINFO(_sailboat_heel_pid, "_SAIL_", 12, AR_AttitudeControl, AC_PID),
+    
+    // @Param: USE_SM
+    // @DisplayName: Use Sliding Mode
+    // @Description: Whether to activate sliding mode control.
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("USE_SM", 13, AR_AttitudeControl,_use_sliding_mode, 0),
+    
+/*    // @Param: M_HOSM
+    // @DisplayName: Mass
+    // @Description: Mass of the rover.
+    // @Units: Kg
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("M_HOSM", 14, AR_AttitudeControl, _mass, 1.0f),
+    
+    // @Param: X_DRAG_SM
+    // @DisplayName: Drag coefficient
+    // @Description: Drag coefficient along the longitudinal axis.
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("X_DRAG_SM", 15, AR_AttitudeControl, _X_drag_SM, 0.0f),*/
+    
+    // @Param: KUP_SM
+    // @DisplayName: Kup value for HOSM
+    // @Description: tauu = .. - sign(s) * KUP_SM * s^(0.5) ...
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KUP_SM", 16, AR_AttitudeControl, _Kup_SM, 1.0f),
+    
+    // @Param: TAUU_MAX_SM
+    // @DisplayName: Maximum tau_u
+    // @Description: tau_u,max
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("TAUU_MAX_SM", 17, AR_AttitudeControl, _tauu_max_SM, 1.0f),
+    
+	// @Param: KTMAX_SM
+    // @DisplayName: KTMAX_SM Gain
+    // @Description: tauu_1_dot = KTMAX_SM * tauu, if tauu>tauu_max
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KTMAX_SM", 18, AR_AttitudeControl,_Ktmax_SM, 1.0f),
+    
+    // @Param: KTDOT_SM
+    // @DisplayName: K_tdot value for HOSM
+    // @Description: tauu_1_dot = -sign(s)*KTDOT_SM
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("KTDOT_SM", 19, AR_AttitudeControl, _Ktdot_SM, 0.5f),
 
     AP_GROUPEND
 };
@@ -486,6 +549,11 @@ float AR_AttitudeControl::get_turn_rate_from_lat_accel(float lat_accel, float sp
 //   cruise speed should be in m/s, cruise throttle should be a number from -1 to +1
 float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor_limit_low, bool motor_limit_high, float cruise_speed, float cruise_throttle, float dt)
 {
+	if (_use_sliding_mode>0) {
+        _STSM_control = 1;
+    } else {
+        _STSM_control = 0;
+    }
     // sanity check dt
     dt = constrain_float(dt, 0.0f, 1.0f);
 
@@ -521,6 +589,11 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     float throttle_out = _throttle_speed_pid.update_all(desired_speed, speed, (_throttle_limit_low || _throttle_limit_high));
     throttle_out += _throttle_speed_pid.get_ff();
     throttle_out += throttle_base;
+    
+    //UniBZ controller:
+    if (_STSM_control) {
+        throttle_out  = THSM_speed_control(desired_speed, speed, dt); // if SM controller is used, throttle_out value computed a few lines above is overridden
+    } 
 
     // clear local limit flags used to stop i-term build-up as we stop reversed outputs going to motors
     _throttle_limit_low = false;
@@ -540,6 +613,38 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
 
     // final output throttle in range -1 to 1
     return throttle_out;
+}
+
+float AR_AttitudeControl::THSM_speed_control(float desired_speed, float speed, float dt)
+{
+    //UniBZ controller:
+
+    //float u_desired_dot = 0;
+    /*if (_lambda2_coeff>0) {
+        u_desired_dot = HOSM_differentiator(desired_speed, dt);
+    } else {
+        u_desired_dot = linear_second_order_differentiator(desired_speed, dt);
+    }*/
+    // first order sliding term is speed error:
+    float u_tilde = speed - desired_speed;
+
+    // update higher order term
+    _tauu_1 += _tauu_1_dot*dt;
+    //calculate desired torque:
+    float tauu = //_mass * u_desired_dot +
+		//- _X_drag_SM * speed * fabs(speed)),
+        - copysign(_Kup_SM*sqrtf(fabs(u_tilde)),u_tilde)  //standard sliding mode term
+        - _tauu_1;  // higher order STSM element
+
+    // determine rate of change of higher order term for jerk control
+    if (fabs(tauu) > _tauu_max_SM) {
+        _tauu_1_dot = _Ktmax_SM*tauu;
+    } else {
+        _tauu_1_dot = copysign(_Ktdot_SM,u_tilde);
+    }
+
+    //gcs().send_text(MAV_SEVERITY_WARNING, "%5.2f Iz: %5.2f S: %5.2f T: %5.2f", wheel_angle_deg, _Iz * r_desired_dot/0.01745, -copysign(_Krp_SM*sqrt(fabs(s_sliding_mode))/0.01745,s_sliding_mode),_taur_1/0.01745);
+    return tauu;
 }
 
 // return a throttle output from -1 to +1 to perform a controlled stop.  returns true once the vehicle has stopped

@@ -153,6 +153,13 @@ private:
 
     // external references
     const AP_AHRS &_ahrs;
+    
+    //STSM controller variables
+    float _tauu_1_dot; //for higher order sliding mode
+    float _tauu_1; //for higher order sliding mode
+
+    // flag to indicate whether direct surge speed control is desired
+    bool _STSM_control = 0;
 
     // parameters
     AC_P     _steer_angle_p;        // steering angle controller
@@ -187,4 +194,14 @@ private:
     // Sailboat heel control
     AC_PID   _sailboat_heel_pid;    // Sailboat heel angle pid controller
     uint32_t _heel_controller_last_ms = 0;
+    
+    // parameters for HOSM:
+    //AP_Float _mass; AP_Float _X_drag_SM; 
+    AP_Float _Kup_SM; AP_Float _Ktmax_SM; AP_Float _Ktdot_SM; AP_Float _tauu_max_SM;
+    AP_Int8 _use_sliding_mode;
+    
+    // UniBZ Controller:
+    // Higher order sliding mode control:
+    float THSM_speed_control(float desired_speed, float speed, float dt);
+
 };
