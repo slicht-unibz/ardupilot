@@ -45,7 +45,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LAMBDA0_C_SM", 4, AP_L1_Control, _lambda0_coeff, 1.1f),
+    AP_GROUPINFO("LM0_SM", 4, AP_L1_Control, _lambda0_coeff, 1.1f),
     
     // @Param: LAMBDA1_COEFF
     // @DisplayName: First HOSM coefficient
@@ -54,7 +54,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LAMBDA1_C_SM", 5, AP_L1_Control, _lambda1_coeff, 1.5f),
+    AP_GROUPINFO("LM1_SM", 5, AP_L1_Control, _lambda1_coeff, 1.5f),
 
     // @Param: LAMBDA2_COEFF
     // @DisplayName: Second HOSM coefficient
@@ -63,7 +63,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LAMBDA2_C_SM", 6, AP_L1_Control, _lambda2_coeff, 3.0f),
+    AP_GROUPINFO("LM2_SM", 6, AP_L1_Control, _lambda2_coeff, 3.0f),
     
     // @Param: L_SM
     // @DisplayName: L value for HOSM
@@ -90,7 +90,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("KDELTA_PHI_SM", 9, AP_L1_Control, _Kdelta_phi_SM, 0.1f),
+    AP_GROUPINFO("KDLPH_SM", 9, AP_L1_Control, _Kdelta_phi_SM, 0.1f),
 
     // @Param: KTDOT_SM
     // @DisplayName: K_tdot value for HOSM
@@ -135,7 +135,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("LK_AHEAD_SM", 14, AP_L1_Control,_lookahead_distance_SM, 5.0f),
+    AP_GROUPINFO("LKAHD_SM", 14, AP_L1_Control,_lookahead_distance_SM, 5.0f),
     
    // @Param: KTMAX_SM
     // @DisplayName: KTMAX_SM Gain
