@@ -515,7 +515,6 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
          float Nu1 = asinf(constrain_float(sine_Nu1, -0.7071f, 0.7071f));
          _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
          _bearing_error = wrap_PI(get_yaw() - _nav_bearing);
-          //_bearing_error = constrain_float(_bearing_error, -1.5708f, +1.5708f);
           
           //if using STSM control, calculate the wheel angle
           _wheel_angle_deg  = STSM_wheel_control(_crosstrack_error, xtrackVel, dt, _ahrs.get_yaw_rate_earth(), _bearing_error, groundSpeed);
