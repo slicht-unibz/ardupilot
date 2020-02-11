@@ -82,23 +82,41 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("SPEED_MIN", 6, AR_WPNav, _speed_min, 0),
 
-    // @Param: BLEND_KS
+    // @Param: BLEND_KS_STR
     // @DisplayName: Spring constant for joystick input.
     // @Description: 10,000 x gain for calculation of virtual work on user joystick input.
     // @Units: 10^-4
     // @Range: 0 10000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("BLEND_KS", 7, AR_WPNav, _blend_ks, 0),
+    AP_GROUPINFO("BLEND_KS_STR", 7, AR_WPNav, _blend_ks, 0),
 
-    // @Param: BLEND_KH
+    // @Param: BLEND_KH_STR
     // @DisplayName: Joystick input proporation gain constant
     // @Description: 1,00 x gain for calculation of virtual work on user joystick input.
     // @Units: 10^-2
     // @Range: 0 100
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("BLEND_KH", 8, AR_WPNav, _blend_kh, 0),    
+    AP_GROUPINFO("BLEND_KH_STR", 8, AR_WPNav, _blend_kh, 0),    
+    
+    // @Param: BLEND_KS_THR
+    // @DisplayName: Spring constant for joystick input.
+    // @Description: 10,000 x gain for calculation of virtual work on user joystick input.
+    // @Units: 10^-4
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("BLEND_KS_THR", 9, AR_WPNav, _blend_ks_thr, 0),
+
+    // @Param: BLEND_KH_THR
+    // @DisplayName: Joystick input proporation gain constant
+    // @Description: 1,00 x gain for calculation of virtual work on user joystick input.
+    // @Units: 10^-2
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("BLEND_KH_THR", 10, AR_WPNav, _blend_kh_thr, 0), 
 
     AP_GROUPEND
 };

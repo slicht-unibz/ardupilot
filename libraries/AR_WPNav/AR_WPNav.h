@@ -41,6 +41,8 @@ public:
     bool use_direct_wheel_control() { return _nav_controller.use_direct_wheel_control(); }    
     float get_ks() { return (float) _blend_ks; }
     float get_kh() { return (float) _blend_kh; }
+    float get_ks_thr() { return (float) _blend_ks_thr; }
+    float get_kh_thr() { return (float) _blend_kh_thr; }
     
     // set current destination
     bool set_current_destination(const struct Location& destination);
@@ -133,7 +135,9 @@ private:
     //UniBZ controller:
     AP_Int16 _blend_ks;
     AP_Int16 _blend_kh;
-
+    AP_Int16 _blend_ks_thr;
+    AP_Int16 _blend_kh_thr;
+    
     // references
     AR_AttitudeControl& _atc;       // rover attitude control library
     AP_Navigation& _nav_controller; // navigation controller (aka L1 controller)
