@@ -1,6 +1,8 @@
 #include <AP_HAL/AP_HAL.h>
 #include "AP_L1_Control.h"
 
+#define LOGGING_ON 0
+
 extern const AP_HAL::HAL& hal;
 
 // table of user settable parameters
@@ -332,16 +334,18 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
 
     float Fx_dot = _z1_dot;
 
-    AP::logger().Write("HSM3","TimeUS,Fx,dt,z1,z2,z3,z1_dot,z2_dot,z3_dot", "Qiiiiiiii", 
-                       AP_HAL::micros64(),
-                       (int32_t)Fx*10e3,
-                       (int32_t)dt*10e3,
-                       (int32_t)_z1*10e3,
-                       (int32_t)_z2*10e3,
-                       (int32_t)_z3*10e3,
-                       (int32_t)_z1_dot*10e3,
-                       (int32_t)_z2_dot*10e3,
-                       (int32_t)_z3_dot*10e3);
+    if (LOGGING_ON) {
+        AP::logger().Write("HSM3","TimeUS,Fx,dt,z1,z2,z3,z1_dot,z2_dot,z3_dot", "Qiiiiiiii", 
+                           AP_HAL::micros64(),
+                           (int32_t)Fx*10e3,
+                           (int32_t)dt*10e3,
+                           (int32_t)_z1*10e3,
+                           (int32_t)_z2*10e3,
+                           (int32_t)_z3*10e3,
+                           (int32_t)_z1_dot*10e3,
+                           (int32_t)_z2_dot*10e3,
+                           (int32_t)_z3_dot*10e3);
+    }
     return Fx_dot;
 }
 
@@ -361,14 +365,16 @@ float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
     // Assign the output values
     float Fx_dot = _z2;
 
-       AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "Qffffff", 
-                          AP_HAL::micros64(),
-                          (double)Fx,
-                          (double)dt,
-                          (double)_z1,
-                          (double)_z2,
-                          (double)_z1_dot,
-                          (double)_z2_dot);
+    if (LOGGING_ON) {
+        AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "Qffffff", 
+                           AP_HAL::micros64(),
+                           (double)Fx,
+                           (double)dt,
+                           (double)_z1,
+                           (double)_z2,
+                           (double)_z1_dot,
+                           (double)_z2_dot);
+    }
     return Fx_dot;
 }
     
@@ -410,22 +416,23 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     wheel_angle_deg = taur/0.01745; //radians back to degrees
     wheel_angle_deg = constrain_float(wheel_angle_deg,-20.0f, 20.0f);
 
-    AP::logger().Write("HSM1","TimeUS,wheelCMD,term1,term2,term3,term4,s", "Qffffff", 
-                       AP_HAL::micros64(),
-                       (double)wheel_angle_deg,
-                       (double)_Iz * r_desired_dot/0.01745f,
-                       (double)_Kdelta_phi_SM * yaw_rate/0.01745f,
-                       (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode)),s_sliding_mode)/0.01745f,
-                       (double)_taur_1/0.01745f,
-                       (double)s_sliding_mode);
-
-    AP::logger().Write("HSM0","TimeUS,xErr,degErr,xErrD,degD", "Qffff", 
-                       AP_HAL::micros64(),
-                       (double)cross_track_error,
-                       (double)bearing_error/0.01745f, 
-                       (double)cross_track_rate,
-                       (double)yaw_rate/0.01745f);
-
+    if (LOGGING_ON) {
+        AP::logger().Write("HSM1","TimeUS,wheelCMD,term1,term2,term3,term4,s", "Qffffff", 
+                           AP_HAL::micros64(),
+                           (double)wheel_angle_deg,
+                           (double)_Iz * r_desired_dot/0.01745f,
+                           (double)_Kdelta_phi_SM * yaw_rate/0.01745f,
+                           (double)-copysign(_Krp_SM*sqrtf(fabs(s_sliding_mode)),s_sliding_mode)/0.01745f,
+                           (double)_taur_1/0.01745f,
+                           (double)s_sliding_mode);
+        
+        AP::logger().Write("HSM0","TimeUS,xErr,degErr,xErrD,degD", "Qffff", 
+                           AP_HAL::micros64(),
+                           (double)cross_track_error,
+                           (double)bearing_error/0.01745f, 
+                           (double)cross_track_rate,
+                           (double)yaw_rate/0.01745f);
+    }
 
     return wheel_angle_deg;
 }
