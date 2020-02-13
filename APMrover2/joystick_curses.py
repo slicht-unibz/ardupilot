@@ -53,19 +53,20 @@ joystick_port = 15090        # UDP port configured in CLS2Sim
 joystick_timeout = 8.0
 
 # RC channel to Ardupilot JS input map:
-js_1 = '5'
-js_2 = '6'
-js_3 = '7'
-js_4 = '8'
+js_1 = '4'
+js_2 = '5'
+js_3 = '6'
+js_4 = '7'
 
 # mission plan settings
-magic_lane_number = 20
+number_of_lanes = 10
+magic_lane_number = number_of_lanes * 2
 
 
 class joystick_controller:
 
     # joystick interaction settings
-    threshold = 0.35
+    threshold = 0.45
     maxForce = 1000
 
     # initialization
@@ -161,13 +162,21 @@ def main(win):
     print("Connecting to vehicle on: %s" % (vehicle_host_port,))
     vehicle = connect(vehicle_host_port, wait_ready=False)
     print("Connected to Vehicle")
-
                      
     # Setup listener for navigation message:
     @vehicle.on_message('NAV_CONTROLLER_OUTPUT')
     def listener(self, name, message):
         js.cross_track_error = float(message.xtrack_error)
-        
+        js.speed_error = float(message.aspd_error)
+        js.nav_bearing = float(message.nav_bearing)
+        js.target_bearing = float(message.target_bearing)
+
+
+    # Setup listener for navigation message:
+    @vehicle.on_message('SERVO_OUTPUT_RAW')
+    def listener(self, name, message):
+        output_name = message.name
+
     # Setup listener for navigation message:
     @vehicle.on_message('NAMED_VALUE_FLOAT')
     def listener(self, name, message):
@@ -232,10 +241,10 @@ def main(win):
             try:
                 key = win.getkey()
                 if key == 'KEY_UP':
-                    debug_value += 0.1
+                    debug_value += 0.05
                     print('Key Up')
                 if key == 'KEY_DOWN':
-                    debug_value += -0.1
+                    debug_value += -0.05
                 if key == os.linesep:
                     #Clear overrides and close vehicle object before exiting script
                     vehicle.channels.overrides = {}
@@ -245,7 +254,6 @@ def main(win):
             except Exception as e:
                 # No input
                 # resend joystick input to keep it from expiring
-                print('nope')
                 pass
             
 curses.wrapper(main)
