@@ -38,7 +38,8 @@ public:
 
     //UniBZ controller:
     float get_wheel_angle_deg() { return _nav_controller.get_wheel_angle_deg(); }
-    bool use_direct_wheel_control() { return _nav_controller.use_direct_wheel_control(); }    
+    bool use_direct_wheel_control() { return _nav_controller.use_direct_wheel_control(); }
+    bool use_throttle_control() { return _atc.use_throttle_control(); }     
     float get_ks() { return (float) _blend_ks; }
     float get_kh() { return (float) _blend_kh; }
     float get_ks_thr() { return (float) _blend_ks_thr; }

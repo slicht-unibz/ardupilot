@@ -459,7 +459,7 @@ void Mode::navigate_to_waypoint()
     // pass speed to throttle controller after applying nudge from pilot
     float desired_speed = g2.wp_nav.get_speed();
     desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
-    if(!g2.wp_nav.use_direct_wheel_control()) {
+    if(!g2.wp_nav.use_throttle_control()) {
 		// call throttle controller
         calc_throttle(desired_speed, true);
     } else {

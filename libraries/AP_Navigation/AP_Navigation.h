@@ -21,7 +21,6 @@ public:
 
     virtual bool use_direct_wheel_control(void) const = 0;
 
-
     // return the desired lateral acceleration in m/s/s to move towards
     // the target waypoint
     virtual float lateral_acceleration(void) const = 0;
