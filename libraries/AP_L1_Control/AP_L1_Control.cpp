@@ -156,6 +156,15 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("USE_SM", 16, AP_L1_Control,_use_sliding_mode, 0),
+
+    // @Param: LGDATA_SM
+    // @DisplayName: 
+    // @Description: Whether to activate sliding mode data collection (may interfere with comms).
+    // @Units: 1
+    // @Range: 0 10000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("LGDATA_SM", 17, AP_L1_Control,_log_sliding_mode_data, 0),
    
     AP_GROUPEND
 };
@@ -334,7 +343,7 @@ float AP_L1_Control::HOSM_differentiator(float Fx,float dt)
 
     float Fx_dot = _z1_dot;
 
-    if (LOGGING_ON) {
+    if (_log_sliding_mode_data) {
         AP::logger().Write("HSM3","TimeUS,Fx,dt,z1,z2,z3,z1_dot,z2_dot,z3_dot", "Qiiiiiiii", 
                            AP_HAL::micros64(),
                            (int32_t)Fx*10e3,
@@ -365,7 +374,7 @@ float AP_L1_Control::linear_second_order_differentiator(float Fx, float dt)
     // Assign the output values
     float Fx_dot = _z2;
 
-    if (LOGGING_ON) {
+    if (_log_sliding_mode_data) {
         AP::logger().Write("HSM2","TimeUS,Fx,dt,z1,z2,z1_dot,z2_dot", "Qffffff", 
                            AP_HAL::micros64(),
                            (double)Fx,
@@ -416,7 +425,7 @@ float AP_L1_Control::STSM_wheel_control(float cross_track_error, float cross_tra
     wheel_angle_deg = taur/0.01745; //radians back to degrees
     wheel_angle_deg = constrain_float(wheel_angle_deg,-20.0f, 20.0f);
 
-    if (LOGGING_ON) {
+    if (_log_sliding_mode_data) {
         AP::logger().Write("HSM1","TimeUS,wheelCMD,term1,term2,term3,term4,s", "Qffffff", 
                            AP_HAL::micros64(),
                            (double)wheel_angle_deg,

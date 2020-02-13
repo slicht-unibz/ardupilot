@@ -155,6 +155,7 @@ private:
     AP_Float _Krp_SM; AP_Float _lookahead_distance_SM; AP_Float _Ktmax_SM;
     AP_Float _Kdelta_phi_SM;
     AP_Int8 _use_sliding_mode;
+    AP_Int8 _log_sliding_mode_data;
 
     
     // integral feedback to correct crosstrack error. Used to ensure xtrack converges to zero.
