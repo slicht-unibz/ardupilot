@@ -367,10 +367,10 @@ void Mode::get_pilot_joystick(float &js_1, float &js_2, float &js_3, float &js_4
      // get joystick input
     uint16_t values[14] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
-    js_1 = (float) values[4];
-    js_2 = (float) values[5];
-    js_3 = (float) values[6];
-    js_4 = (float) values[7];
+    js_1 = (float) values[3];
+    js_2 = (float) values[4];
+    js_3 = (float) values[5];
+    js_4 = (float) values[6];
 
 }
 

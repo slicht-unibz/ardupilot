@@ -53,10 +53,10 @@ joystick_port = 15090        # UDP port configured in CLS2Sim
 joystick_timeout = 8.0
 
 # RC channel to Ardupilot JS input map:
-js_1 = '5'
-js_2 = '6'
-js_3 = '7'
-js_4 = '8'
+js_1 = '4'
+js_2 = '5'
+js_3 = '6'
+js_4 = '7'
 
 # mission plan settings
 magic_lane_number = 20
@@ -177,7 +177,7 @@ def main(win):
             js.vehicle_output[output_number-1] = float(message.value)
 
     debug_value = 0.1
-    joystick_attempts = 0
+    joystick_attempts = 1
     js.pos = [js.joystick_center+debug_value,js.joystick_center,js.joystick_center,js.joystick_center]
     
     while 1:
