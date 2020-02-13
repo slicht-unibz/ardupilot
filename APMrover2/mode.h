@@ -46,6 +46,10 @@ public:
     // perform any cleanups required:
     void exit();
 
+    //UNIBZ Controller:
+    uint16_t _current_delay_loop; //number of loop executions to delay between sending new MAVLINK message.
+
+    
     // returns a unique number specific to this mode
     virtual uint32_t mode_number() const = 0;
 
@@ -329,6 +333,7 @@ private:
     float _desired_speed;   // desired speed in HeadingAndSpeed submode
     bool _reached_heading;  // true when vehicle has reached desired heading in TurnToHeading sub mode
 
+    
     // Loiter control
     uint16_t loiter_duration;       // How long we should loiter at the nav_waypoint (time in seconds)
     uint32_t loiter_start_time;     // How long have we been loitering - The start time in millis

@@ -98,7 +98,18 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 100
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("BLEND_KH", 8, AR_WPNav, _blend_kh, 0),    
+    AP_GROUPINFO("BLEND_KH", 8, AR_WPNav, _blend_kh, 0),
+
+    // @Param: BLEND_KH
+    // @DisplayName: Output delay lopps
+    // @Description: Delay kludge
+    // @Units: 10^-2
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("DEL_LOOPS", 9, AR_WPNav, _delay_loop_number, 10),
+
+
 
     AP_GROUPEND
 };

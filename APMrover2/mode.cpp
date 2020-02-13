@@ -367,10 +367,10 @@ void Mode::get_pilot_joystick(float &js_1, float &js_2, float &js_3, float &js_4
      // get joystick input
     uint16_t values[14] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
-    js_1 = (float) values[4];
-    js_2 = (float) values[5];
-    js_3 = (float) values[6];
-    js_4 = (float) values[7];
+    js_1 = (float) values[3];
+    js_2 = (float) values[4];
+    js_3 = (float) values[5];
+    js_4 = (float) values[6];
 
 }
 
@@ -379,6 +379,7 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
     //UniBZ controller:
     float k_s = g2.wp_nav.get_ks();
     float k_h = g2.wp_nav.get_kh();
+    float max_loops = g2.wp_nav.get_delay_loop_number();
 
     float input_center = 1500;
     float input_scaling = 1000;
@@ -403,11 +404,16 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
             }
 
     float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
-    gcs().send_named_float("js_out_1",steering_correction);
-    gcs().send_named_float("js_out_2",adjusted_wheel_angle_deg);
-    gcs().send_named_float("js_out_3",controller_wheel_angle_deg);
-    gcs().send_named_float("js_out_4",lateral_input);
-        
+    if (_current_delay_loop>max_loops){
+        gcs().send_named_float("js_out_1",steering_correction);
+        gcs().send_named_float("js_out_2",adjusted_wheel_angle_deg);
+        gcs().send_named_float("js_out_3",controller_wheel_angle_deg);
+        gcs().send_named_float("js_out_4",lateral_input);
+        _current_delay_loop = 0;
+    } else {
+        _current_delay_loop += 1;
+    }
+    
     return adjusted_wheel_angle_deg;
 }
 
