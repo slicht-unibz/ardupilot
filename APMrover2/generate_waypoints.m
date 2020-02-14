@@ -1,12 +1,14 @@
 wgs84 = wgs84Ellipsoid;
-lat0 = 46.4706546247496;
-lon0 = 11.3284988701344;
+
+lat0 = 46.4712088
+lon0 = 11.3288087
+
 h0 = 450;
 
 leg_length = 40; %m
 leg_spacing = 3; %m
-number_of_legs = 1  0;
-angle_deg = 68.5;
+number_of_legs = 5;
+angle_deg = 180+68.5;
 speed = 1.5; %m/s
 
 for i = 1:number_of_legs
