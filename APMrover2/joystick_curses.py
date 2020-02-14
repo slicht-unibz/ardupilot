@@ -46,7 +46,7 @@ import numpy
 
 
 # comms settings
-vehicle_host_port = '127.0.0.1:14551'
+vehicle_host_port = '127.0.0.1:14550'
 loop_delay = 0.1
 joystick_host = '127.0.0.1'  # IP address of machine running CLS2Sim
 joystick_port = 15090        # UDP port configured in CLS2Sim
@@ -61,7 +61,6 @@ js_4 = '7'
 # mission plan settings
 number_of_lanes = 10
 magic_lane_number = number_of_lanes * 2
-
 
 class joystick_controller:
 
@@ -162,7 +161,9 @@ def main(win):
     print("Connecting to vehicle on: %s" % (vehicle_host_port,))
     vehicle = connect(vehicle_host_port, wait_ready=False)
     print("Connected to Vehicle")
-                     
+
+    start_time = time.time()
+    
     # Setup listener for navigation message:
     @vehicle.on_message('NAV_CONTROLLER_OUTPUT')
     def listener(self, name, message):
@@ -170,12 +171,10 @@ def main(win):
         js.speed_error = float(message.aspd_error)
         js.nav_bearing = float(message.nav_bearing)
         js.target_bearing = float(message.target_bearing)
-
-
-    # Setup listener for navigation message:
-    @vehicle.on_message('SERVO_OUTPUT_RAW')
-    def listener(self, name, message):
-        output_name = message.name
+        win.addstr(1,0,message.name)
+        current_time = time.time()
+        elapsed_time = current_time-start_time
+        win.addstr('  ' + str(numpy.around(elapsed_time,2)))
 
     # Setup listener for navigation message:
     @vehicle.on_message('NAMED_VALUE_FLOAT')
@@ -184,6 +183,10 @@ def main(win):
         if (output_name[0:7]=='js_out_'):
             output_number = int(output_name[7])
             js.vehicle_output[output_number-1] = float(message.value)
+        win.addstr(output_number,0,message.name)
+        current_time = time.time()
+        elapsed_time = current_time-start_time
+        win.addstr('  ' + str(numpy.around(elapsed_time,2)))
 
     debug_value = 0.1
     joystick_attempts = 0
@@ -222,15 +225,16 @@ def main(win):
             vehicle.channels.overrides[js_4] = js.controller_output[3]
             
             # Print positions
-            win.clear()
-            win.addstr('Joystick:' + str(numpy.around(numpy.array(js.pos[0:4]),2)))
-            win.addstr('  Control:' + str(numpy.around(numpy.array(js.controller_output),0)))
-            win.addstr('  Vehicle:' + str(numpy.around(numpy.array(js.vehicle_output),1)))
 
+            win.addstr(10,0,'Joystick:' + str(numpy.around(numpy.array(js.pos[0:4]),2)))
+            win.addstr(11,0,'Control:' + str(numpy.around(numpy.array(js.controller_output),0)))
+            win.addstr(12,0,'Vehicle:' + str(numpy.around(numpy.array(js.vehicle_output),1)))
+            
             # Exectute lane change if triggered:
             if js.lane_change_flag :
-                win.addstr("  LANE CHANGE COMMANDED: Center Stick to Regain Control")
-            
+                win.move(3,0)
+                win.addstr('LANE CHANGE COMMANDED: Center Stick to Regain Control')
+                
             if (js.trigger_lane_change==0):
                  pass
             else:
