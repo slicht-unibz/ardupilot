@@ -643,6 +643,20 @@ float AR_AttitudeControl::THSM_speed_control(float desired_speed, float speed, f
         _tauu_1_dot = copysign(_Ktdot_SM,u_tilde);
     }
 
+    AP::logger().Write("TSM1","TimeUS,tauu,term1,term2,u_tilde", "Qffff", 
+                       AP_HAL::micros64(),
+                       (double)tauu,
+                       (double)-copysign(_Kup_SM*sqrtf(fabs(u_tilde)),u_tilde), 
+                       (double)-_tauu_1,
+                       (double)u_tilde);
+    
+    AP::logger().Write("TSM0","TimeUS,speed,d_speed", "Qff", 
+                       AP_HAL::micros64(),
+                       (double)speed,
+                       (double)desired_speed);
+    
+
+    
     //gcs().send_text(MAV_SEVERITY_WARNING, "%5.2f Iz: %5.2f S: %5.2f T: %5.2f", wheel_angle_deg, _Iz * r_desired_dot/0.01745, -copysign(_Krp_SM*sqrt(fabs(s_sliding_mode))/0.01745,s_sliding_mode),_taur_1/0.01745);
     return tauu;
 }
