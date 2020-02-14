@@ -417,6 +417,43 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
     return adjusted_wheel_angle_deg;
 }
 
+float Mode::apply_human_control_thr(float controller_throttle)
+{
+    //UniBZ controller:
+    float k_s = g2.wp_nav.get_ks_thr();
+    float k_h = g2.wp_nav.get_kh_thr();
+
+    float input_center = 1500;
+    float input_scaling = 1000;
+    
+    float throttle_input = 0;
+    float js_1 = 0; float js_2 = 0; float js_3 = 0; float js_4 = 0;
+    //get_pilot_desired_lateral(lateral_input);
+    get_pilot_joystick(js_1, js_2, js_3, js_4);
+    throttle_input = (js_2-input_center)/input_scaling; //normalized, -1 to 1
+        
+    float adjusted_throttle = 0;
+    float throttle_control_input = k_h * throttle_input;
+    
+    if (k_s>0) {
+        //update_virtual_human_work
+        float virtual_human_input_work = 0.5 * k_s * powf(throttle_input, 2.0);
+        float correction_factor = expf(-virtual_human_input_work);
+        adjusted_throttle =  controller_throttle * correction_factor + throttle_control_input *(1 - correction_factor);
+    }
+    else {
+        adjusted_throttle =  controller_throttle;
+         }
+
+    //float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
+    //gcs().send_named_float("js_out_1",steering_correction);
+    //gcs().send_named_float("js_out_2",adjusted_wheel_angle_deg);
+    //gcs().send_named_float("js_out_3",controller_wheel_angle_deg);
+    //gcs().send_named_float("js_out_4",lateral_input);
+        
+    return adjusted_throttle;
+}
+
 // high level call to navigate to waypoint
 // uses wp_nav to calculate turn rate and speed to drive along the path from origin to destination
 // this function updates _distance_to_destination
@@ -428,7 +465,16 @@ void Mode::navigate_to_waypoint()
     // pass speed to throttle controller after applying nudge from pilot
     float desired_speed = g2.wp_nav.get_speed();
     desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
-    calc_throttle(desired_speed, true);
+    if(!g2.wp_nav.use_throttle_control()) {
+		// call throttle controller
+        calc_throttle(desired_speed, true);
+    } else {
+		//UniBZ controller:
+        float adjusted_throttle = apply_human_control_thr(desired_speed);
+        calc_throttle(adjusted_throttle, true);
+	}
+    
+    
 
     // pass wheel angle to controller
     float desired_heading_cd = g2.wp_nav.oa_wp_bearing_cd();

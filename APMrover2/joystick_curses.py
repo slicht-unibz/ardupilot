@@ -186,7 +186,7 @@ def main(win):
             js.vehicle_output[output_number-1] = float(message.value)
 
     debug_value = 0.1
-    joystick_attempts = 0
+    joystick_attempts = 1
     js.pos = [js.joystick_center+debug_value,js.joystick_center,js.joystick_center,js.joystick_center]
     
     while 1:

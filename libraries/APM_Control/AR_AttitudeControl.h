@@ -148,6 +148,10 @@ public:
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
+    
+    bool use_throttle_control(void) {
+        return _THSM_control;
+    }
 
 private:
 
@@ -159,7 +163,7 @@ private:
     float _tauu_1; //for higher order sliding mode
 
     // flag to indicate whether direct surge speed control is desired
-    bool _STSM_control = 0;
+    bool _THSM_control = 0;
 
     // parameters
     AC_P     _steer_angle_p;        // steering angle controller
