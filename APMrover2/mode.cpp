@@ -430,7 +430,7 @@ float Mode::apply_human_control_thr(float controller_throttle)
     float js_1 = 0; float js_2 = 0; float js_3 = 0; float js_4 = 0;
     //get_pilot_desired_lateral(lateral_input);
     get_pilot_joystick(js_1, js_2, js_3, js_4);
-    throttle_input = (js_2-input_center)/input_scaling; //normalized, -1 to 1
+    throttle_input = -(js_2-input_center)/input_scaling; //normalized, -1 to 1
         
     float adjusted_throttle = 0;
     float throttle_control_input = k_h * throttle_input;
@@ -445,11 +445,11 @@ float Mode::apply_human_control_thr(float controller_throttle)
         adjusted_throttle =  controller_throttle;
          }
 
-    //float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
-    //gcs().send_named_float("js_out_1",steering_correction);
-    //gcs().send_named_float("js_out_2",adjusted_wheel_angle_deg);
-    //gcs().send_named_float("js_out_3",controller_wheel_angle_deg);
-    //gcs().send_named_float("js_out_4",lateral_input);
+    float throttle_correction = adjusted_throttle - controller_throttle;
+    gcs().send_named_float("js_out_5",throttle_correction);
+    gcs().send_named_float("js_out_6",adjusted_throttle);
+    gcs().send_named_float("js_out_7",controller_throttle);
+    gcs().send_named_float("js_out_8",throttle_input);
         
     return adjusted_throttle;
 }

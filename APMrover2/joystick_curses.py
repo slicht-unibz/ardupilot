@@ -72,10 +72,10 @@ class joystick_controller:
     # initialization
     joystick_center = 0.5
     output_center = 1500
-    output_scaling = 1000
+    output_scaling = 250
 
     joystick_input = joystick_center
-    vehicle_output = [0,0,0,0]
+    vehicle_output = [0,0,0,0,0,0,0,0]
     controller_output = [0,0,0,0]
     
     force = [0,0,0,0]
@@ -89,25 +89,25 @@ class joystick_controller:
 
     roll_offset_gain = 1000
     pitch_offset_gain = 1000
-    vehicle_output_gain = [0, 0, 0, 0]
+    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -1, 1]
     cross_track_gain = 0
     
     def calc_controller_output(self):
 
         # React to roll position:
-        pitch_offset = self.pos[0] - self.joystick_center
-        roll_offset = self.pos[1] - self.joystick_center
+        pitch_offset = 2.0*self.pos[0]-1.0 - self.vehicle_output[6]*self.vehicle_output_gain[6]
+        roll_offset = 2.0*self.pos[1]-1.0 - self.vehicle_output[2]*self.vehicle_output_gain[2]
 
         # Calculate joystick forces based on positions and vehicle outputs:
         self.force[0] = 0
         self.force[0] = pitch_offset*self.pitch_offset_gain
-        self.force[1] = -self.cross_track_error*self.cross_track_gain + roll_offset*self.roll_offset_gain
+        self.force[1] = roll_offset*self.roll_offset_gain #-self.cross_track_error*self.cross_track_gain + 
         pitch_force = self.force[0]
         roll_force = self.force[1]
 
         # Return desired outputs to vehicle:
         self.controller_output[0] =  self.output_scaling*roll_offset + self.output_center
-        self.controller_output[1] =  self.output_scaling*pitch_offset + self.output_center
+        self.controller_output[1] =  -self.output_scaling*pitch_offset + self.output_center # pitch is reversed!
         self.controller_output[2] =  roll_force + self.output_center
         self.controller_output[3] =  pitch_force + self.output_center
         
