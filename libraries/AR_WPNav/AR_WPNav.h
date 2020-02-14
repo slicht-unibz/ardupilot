@@ -136,8 +136,8 @@ private:
     //UniBZ controller:
     AP_Int16 _blend_ks;
     AP_Int16 _blend_kh;
-    AP_Int16 _blend_ks_thr;
-    AP_Int16 _blend_kh_thr;
+    AP_Float _blend_ks_thr;
+    AP_Float _blend_kh_thr;
     
     // references
     AR_AttitudeControl& _atc;       // rover attitude control library

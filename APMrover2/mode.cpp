@@ -424,20 +424,28 @@ float Mode::apply_human_control_thr(float controller_throttle)
     float js_1 = 0; float js_2 = 0; float js_3 = 0; float js_4 = 0;
     //get_pilot_desired_lateral(lateral_input);
     get_pilot_joystick(js_1, js_2, js_3, js_4);
-    throttle_input = (js_2-input_center)/input_scaling; //normalized, -1 to 1
+    throttle_input = -(js_2-input_center)/input_scaling; //normalized, -1 to 1
         
     float adjusted_throttle = 0;
     float throttle_control_input = k_h * throttle_input;
+    float virtual_human_input_work = 0;
     
     if (k_s>0) {
         //update_virtual_human_work
-        float virtual_human_input_work = 0.5 * k_s * powf(throttle_input, 2.0);
+        virtual_human_input_work = 0.5 * k_s * powf(throttle_input, 2.0);
         float correction_factor = expf(-virtual_human_input_work);
         adjusted_throttle =  controller_throttle * correction_factor + throttle_control_input *(1 - correction_factor);
     }
     else {
         adjusted_throttle =  controller_throttle;
          }
+    
+    AP::logger().Write("JSTH","TimeUS,ControllerThrottle,JoystickThrottle,Vh,BlendedThrottle","Qffff",
+		AP_HAL::micros64(),
+		(double)controller_throttle,
+		(double)throttle_input,
+		(double)virtual_human_input_work,
+		(double)adjusted_throttle);
 
     //float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
     //gcs().send_named_float("js_out_1",steering_correction);
