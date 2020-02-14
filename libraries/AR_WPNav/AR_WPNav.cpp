@@ -118,6 +118,15 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("BLEND_KH_THR", 10, AR_WPNav, _blend_kh_thr, 0), 
 
+    // @Param: DEL_LOOPS
+    // @DisplayName: Output delay lopps
+    // @Description: Delay kludge
+    // @Units: 10^-2
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("DEL_LOOPS", 11, AR_WPNav, _delay_loop_number, 10),
+    
     AP_GROUPEND
 };
 
