@@ -167,7 +167,7 @@ protected:
     // decode input from RC overrides:
     void get_pilot_joystick(float &js_1, float &js_2, float &js_3, float &js_4);
     //adjust steering control based on human input
-    float apply_human_control(float controller_wheel_angle_deg);
+    float apply_human_control_str(float controller_wheel_angle_deg);
     //adjust throttle control based on human input
     float apply_human_control_thr(float controller_throttle);
     // calculate steering output given a desired wheel angle

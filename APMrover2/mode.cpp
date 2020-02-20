@@ -374,7 +374,7 @@ void Mode::get_pilot_joystick(float &js_1, float &js_2, float &js_3, float &js_4
 
 }
 
-float Mode::apply_human_control(float controller_wheel_angle_deg)
+float Mode::apply_human_control_str(float controller_wheel_angle_deg)
 {
     //UniBZ controller:
     float k_s = g2.wp_nav.get_ks();
@@ -392,10 +392,11 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
         
     float adjusted_wheel_angle_deg = 0;
     float lateral_control_input = k_h * lateral_input;
+    float virtual_human_input_work = 0;
     
     if (k_s>0) {
         //update_virtual_human_work
-        float virtual_human_input_work = 0.5 * k_s * powf(lateral_input, 2.0);
+        virtual_human_input_work = 0.5 * k_s * powf(lateral_input, 2.0);
         float correction_factor = expf(-virtual_human_input_work);
         adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
     }
@@ -403,15 +404,19 @@ float Mode::apply_human_control(float controller_wheel_angle_deg)
         adjusted_wheel_angle_deg =  controller_wheel_angle_deg;
             }
 
+    AP::logger().Write("JSS","TimeUS,Ctl_angle,JoystickLateral,Vh,BlendedSt","Qffff",
+                       AP_HAL::micros64(),
+                       (double)controller_wheel_angle_deg,
+                       (double)lateral_control_input,
+                       (double)virtual_human_input_work,
+                       (double)adjusted_wheel_angle_deg);
+
     float steering_correction = adjusted_wheel_angle_deg -  controller_wheel_angle_deg;
     if (_current_delay_loop>max_loops){
         gcs().send_named_float("js_out_1",steering_correction);
         gcs().send_named_float("js_out_2",adjusted_wheel_angle_deg);
         gcs().send_named_float("js_out_3",controller_wheel_angle_deg);
         gcs().send_named_float("js_out_4",lateral_input);
-        _current_delay_loop = 0;
-    } else {
-        _current_delay_loop += 1;
     }
     
     return adjusted_wheel_angle_deg;
@@ -422,6 +427,7 @@ float Mode::apply_human_control_thr(float controller_throttle)
     //UniBZ controller:
     float k_s = g2.wp_nav.get_ks_thr();
     float k_h = g2.wp_nav.get_kh_thr();
+    float max_loops = g2.wp_nav.get_delay_loop_number();
 
     float input_center = 1500;
     float input_scaling = 1000;
@@ -446,18 +452,21 @@ float Mode::apply_human_control_thr(float controller_throttle)
         adjusted_throttle =  controller_throttle;
          }
          
-    AP::logger().Write("JST2","TimeUS,JoystickThrottle,Vh,BlendedThrottle","Qfff",
-		AP_HAL::micros64(),
-		(double)throttle_control_input,
-		(double)virtual_human_input_work,
-		(double)adjusted_throttle);
+    AP::logger().Write("JST","TimeUS,Ctl_thr,JoystickThrottle,Vh,BlendedThrottle","Qffff",
+                       AP_HAL::micros64(),
+                       (double)controller_throttle,
+                       (double)throttle_control_input,
+                       (double)virtual_human_input_work,
+                       (double)adjusted_throttle);
 
     float throttle_correction = adjusted_throttle - controller_throttle;
-    gcs().send_named_float("js_out_5",throttle_correction);
-    gcs().send_named_float("js_out_6",adjusted_throttle);
-    gcs().send_named_float("js_out_7",controller_throttle);
-    gcs().send_named_float("js_out_8",throttle_input);
-        
+    if (_current_delay_loop>max_loops){
+        gcs().send_named_float("js_out_5",throttle_correction);
+        gcs().send_named_float("js_out_6",adjusted_throttle);
+        gcs().send_named_float("js_out_7",controller_throttle);
+        gcs().send_named_float("js_out_8",throttle_input);
+    }
+    
     return adjusted_throttle;
 }
 
@@ -466,15 +475,15 @@ float Mode::apply_human_control_thr(float controller_throttle)
 // this function updates _distance_to_destination
 void Mode::navigate_to_waypoint()
 {
+    float max_loops = g2.wp_nav.get_delay_loop_number();
+        
     g2.wp_nav.update(rover.G_Dt);
     _distance_to_destination = g2.wp_nav.get_distance_to_destination();
 
     // pass speed to throttle controller after applying nudge from pilot
     float desired_speed = g2.wp_nav.get_speed();
     desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
-    AP::logger().Write("JST1","TimeUS,ControllerThrottle","Qf",
-		AP_HAL::micros64(),
-		(double)desired_speed);
+ 
     if(!g2.wp_nav.use_throttle_control()) {
 		// call throttle controller
         calc_throttle(desired_speed, true);
@@ -483,9 +492,7 @@ void Mode::navigate_to_waypoint()
         float adjusted_throttle = apply_human_control_thr(desired_speed);
         calc_throttle(adjusted_throttle, true);
 	}
-    
-    
-
+  
     // pass wheel angle to controller
     float desired_heading_cd = g2.wp_nav.oa_wp_bearing_cd();
     if (g2.sailboat.use_indirect_route(desired_heading_cd)) {
@@ -501,9 +508,15 @@ void Mode::navigate_to_waypoint()
         } else {
             //UniBZ controller:
             float controller_steering_angle_deg = g2.wp_nav.get_wheel_angle_deg();
-            float adjusted_steering_angle_deg = apply_human_control(controller_steering_angle_deg);
+            float adjusted_steering_angle_deg = apply_human_control_str(controller_steering_angle_deg);
             calc_steering_from_direct_wheel_angle(adjusted_steering_angle_deg);
         }
+    }
+
+    if (_current_delay_loop>max_loops){
+        _current_delay_loop = 0;
+    } else {
+        _current_delay_loop += 1;
     }
 }
 
