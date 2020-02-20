@@ -89,7 +89,7 @@ class joystick_controller:
 
     roll_offset_gain = 1000
     pitch_offset_gain = 1000
-    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -1, 1]
+    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.5, 1]
     cross_track_gain = 0
     
     def calc_controller_output(self):
