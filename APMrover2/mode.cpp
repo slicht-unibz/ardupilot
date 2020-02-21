@@ -445,6 +445,10 @@ float Mode::apply_human_control_thr(float controller_throttle)
     else {
         adjusted_throttle =  controller_throttle;
          }
+    
+    if (adjusted_throttle<0) {
+		adjusted_throttle = 0.0;
+	}
          
     AP::logger().Write("JST2","TimeUS,JoystickThrottle,Vh,BlendedThrottle","Qfff",
 		AP_HAL::micros64(),
