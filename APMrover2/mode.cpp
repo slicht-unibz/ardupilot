@@ -268,6 +268,11 @@ void Mode::calc_throttle(float target_speed, bool avoidance_enabled)
         }
     }
 
+	if(g2.wp_nav.use_throttle_control()) {
+		//UniBZ controller:
+		throttle_out = apply_human_control_thr(throttle_out);
+	}
+
     // send to motor
     g2.motors.set_throttle(throttle_out);
 }
@@ -488,14 +493,8 @@ void Mode::navigate_to_waypoint()
     float desired_speed = g2.wp_nav.get_speed();
     desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
  
-    if(!g2.wp_nav.use_throttle_control()) {
-		// call throttle controller
-        calc_throttle(desired_speed, true);
-    } else {
-		//UniBZ controller:
-        float adjusted_throttle = apply_human_control_thr(desired_speed);
-        calc_throttle(adjusted_throttle, true);
-	}
+	// call throttle controller
+    calc_throttle(desired_speed, true);	
   
     // pass wheel angle to controller
     float desired_heading_cd = g2.wp_nav.oa_wp_bearing_cd();
