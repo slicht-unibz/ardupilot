@@ -59,8 +59,10 @@ js_3 = '6'
 js_4 = '7'
 
 # mission plan settings
-number_of_lanes = 10
+number_of_lanes = 5
 magic_lane_number = number_of_lanes * 2
+
+max_speed = 3.0
 
 class joystick_controller:
 
@@ -87,14 +89,14 @@ class joystick_controller:
     name = {}
 
     roll_offset_gain = 1000
-    pitch_offset_gain = 1000
-    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.5, 1]
+    pitch_offset_gain = -500
+    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, 1, 1]
     cross_track_gain = 0
     
     def calc_controller_output(self):
 
         # React to roll position:
-        pitch_offset = 2.0*self.pos[0]-1.0 - self.vehicle_output[6]*self.vehicle_output_gain[6]
+        pitch_offset = (1.0-self.pos[0])*max_speed - self.vehicle_output[6]*self.vehicle_output_gain[6]
         roll_offset = 2.0*self.pos[1]-1.0 - self.vehicle_output[2]*self.vehicle_output_gain[2]
 
         # Calculate joystick forces based on positions and vehicle outputs:
@@ -106,7 +108,7 @@ class joystick_controller:
 
         # Return desired outputs to vehicle:
         self.controller_output[0] =  self.output_scaling*roll_offset + self.output_center
-        self.controller_output[1] =  -self.output_scaling*pitch_offset + self.output_center # pitch is reversed!
+        self.controller_output[1] =  self.output_scaling*pitch_offset + self.output_center # pitch is reversed!
         self.controller_output[2] =  roll_force + self.output_center
         self.controller_output[3] =  pitch_force + self.output_center
         
@@ -127,21 +129,44 @@ class joystick_controller:
 
     
 def lane_change(vehicle,magic_lane_number,direction):  # react to lane change command
-    nextwaypoint=vehicle.commands.next
-    if direction>0:
-        if nextwaypoint < magic_lane_number:
-            skiptowaypoint = nextwaypoint+magic_lane_number+2
-        else:
-            skiptowaypoint = nextwaypoint-magic_lane_number+2
-    else:
-        if nextwaypoint < magic_lane_number:
-            skiptowaypoint = nextwaypoint+magic_lane_number-2
-        else:
-            skiptowaypoint = nextwaypoint-magic_lane_number-2    
-    print('Next Way Point: %s' % nextwaypoint)
-    print('Skipping to Way Point %s.' % skiptowaypoint)
-    vehicle.commands.next = skiptowaypoint
-    print('Next Way Point: %s' % skiptowaypoint)
+	nextwaypoint=vehicle.commands.next -1 # -1 is to account for DO_CHANGE_SPEED
+	flag = 0
+	if nextwaypoint <= magic_lane_number:
+		if direction>0:
+			if nextwaypoint % 4 == 0: # W
+				skiptowaypoint = nextwaypoint+magic_lane_number+2
+			elif nextwaypoint % 4 == 2: # E
+				skiptowaypoint = nextwaypoint+magic_lane_number-2
+			else:
+				flag = 1
+		else:
+			if nextwaypoint % 4 == 0: # W
+				skiptowaypoint = nextwaypoint+magic_lane_number-2
+			elif nextwaypoint % 4 == 2: # E
+				skiptowaypoint = nextwaypoint+magic_lane_number+2
+			else:
+				flag = 1         
+	else:
+		if direction>0:
+			if nextwaypoint % 4 == 0: # W
+				skiptowaypoint = nextwaypoint-magic_lane_number+2
+			elif nextwaypoint % 4 == 2: # E
+				skiptowaypoint = nextwaypoint-magic_lane_number-2
+			else:
+				flag = 1
+		else:
+			if nextwaypoint % 4 == 0: # W
+				skiptowaypoint = nextwaypoint-magic_lane_number-2
+			elif nextwaypoint % 4 == 2: # E
+				skiptowaypoint = nextwaypoint-magic_lane_number+2
+			else:
+				flag = 1
+	if flag == 0:
+		if (nextwaypoint>0 and nextwaypoint<=magic_lane_number and skiptowaypoint>magic_lane_number and skiptowaypoint<=2*magic_lane_number) or (nextwaypoint>magic_lane_number and nextwaypoint<=2*magic_lane_number and skiptowaypoint>0 and skiptowaypoint<=magic_lane_number):
+			print('Next Way Point: %s' % nextwaypoint)
+			print('Skipping to Way Point %s.' % skiptowaypoint)
+			vehicle.commands.next = skiptowaypoint + 1 # +1 is to account for DO_CHANGE_SPEED
+			print('Next Way Point: %s' % skiptowaypoint)
     
 def main(win):
     # Initialize curses window:
