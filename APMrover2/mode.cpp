@@ -267,12 +267,18 @@ void Mode::calc_throttle(float target_speed, bool avoidance_enabled)
             rover.balancebot_pitch_control(throttle_out);
         }
     }
-
+    
 	if(g2.wp_nav.use_throttle_control()) {
 		//UniBZ controller:
 		throttle_out = apply_human_control_thr(throttle_out);
 	}
-
+	
+    if (throttle_out>attitude_control.throttle_max_sm){
+		throttle_out=attitude_control.throttle_max_sm;
+	} else if (throttle_out<attitude_control.throttle_min_sm){
+		throttle_out=attitude_control.throttle_min_sm;
+	}
+	
     // send to motor
     g2.motors.set_throttle(throttle_out);
 }
@@ -387,13 +393,13 @@ float Mode::apply_human_control_str(float controller_wheel_angle_deg)
     float max_loops = g2.wp_nav.get_delay_loop_number();
 
     float input_center = 1500;
-    float input_scaling = 1000;
+    float input_scaling = 500;
     
     float lateral_input = 0;
     float js_1 = 0; float js_2 = 0; float js_3 = 0; float js_4 = 0;
     //get_pilot_desired_lateral(lateral_input);
     get_pilot_joystick(js_1, js_2, js_3, js_4);
-    lateral_input = (js_1-input_center)/input_scaling; //normalized, -1 to 1
+    lateral_input = (js_2-input_center)/input_scaling; //normalized, -1 to 1
         
     float adjusted_wheel_angle_deg = 0;
     float lateral_control_input = k_h * lateral_input;
@@ -401,13 +407,17 @@ float Mode::apply_human_control_str(float controller_wheel_angle_deg)
     
     if (k_s>0) {
         //update_virtual_human_work
-        virtual_human_input_work = 0.5 * k_s * powf(lateral_input, 2.0);
-        float correction_factor = expf(-virtual_human_input_work);
-        adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
+        virtual_human_input_work = 0.5 * k_s * powf(lateral_input - controller_wheel_angle_deg*0.05f, 2.0); // *0.05f is to normalize angle, -1 to 1
+        if (g.jsmanual == 0) {
+			float correction_factor = expf(-virtual_human_input_work);
+			adjusted_wheel_angle_deg =  controller_wheel_angle_deg * correction_factor + lateral_control_input *(1 - correction_factor);
+		} else {
+			adjusted_wheel_angle_deg = lateral_control_input;
+		}
     }
     else {
         adjusted_wheel_angle_deg =  controller_wheel_angle_deg;
-            }
+    }
 
     AP::logger().Write("JSS","TimeUS,Ctl_angle,JoystickLateral,Vh,BlendedSt","Qffff",
                        AP_HAL::micros64(),
@@ -435,31 +445,34 @@ float Mode::apply_human_control_thr(float controller_throttle)
     float max_loops = g2.wp_nav.get_delay_loop_number();
 
     float input_center = 1500;
-    float input_scaling = 1000;
+    float input_scaling = 500;
     
     float throttle_input = 0;
     float js_1 = 0; float js_2 = 0; float js_3 = 0; float js_4 = 0;
     //get_pilot_desired_lateral(lateral_input);
     get_pilot_joystick(js_1, js_2, js_3, js_4);
-    throttle_input = (js_2-input_center)/input_scaling; //normalized, -1 to 1
+    throttle_input = (js_1-input_center)/input_scaling; //normalized, -1 to 1
         
     float adjusted_throttle = 0;
-    float throttle_control_input = k_h * throttle_input;
+    float throttle_control_input = k_h * throttle_input; // for comparison, controller_throttle is in [-100,100]
     float virtual_human_input_work = 0;
     
     if (k_s>0) {
         //update_virtual_human_work
-        virtual_human_input_work = 0.5 * k_s * powf(throttle_input, 2.0);
-        float correction_factor = expf(-virtual_human_input_work);
-        adjusted_throttle =  controller_throttle * correction_factor + throttle_control_input *(1 - correction_factor);
-    }
-    else {
+        virtual_human_input_work = 0.5 * k_s * powf(throttle_input - controller_throttle*0.01f, 2.0);
+        if (g.jsmanual == 0){
+			float correction_factor = expf(-virtual_human_input_work);
+			adjusted_throttle =  controller_throttle * correction_factor + throttle_control_input *(1 - correction_factor);
+		} else {
+        adjusted_throttle =  throttle_control_input;
+		}
+    } else {
         adjusted_throttle =  controller_throttle;
-         }
+    }
     
-    if (adjusted_throttle<0) {
-		adjusted_throttle = 0.0;
-	}
+    //if (adjusted_throttle<0) {
+		//adjusted_throttle = 0.0;
+	//}
          
     AP::logger().Write("JST","TimeUS,Ctl_thr,JoystickThrottle,Vh,BlendedThrottle","Qffff",
                        AP_HAL::micros64(),

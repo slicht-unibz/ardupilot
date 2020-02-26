@@ -140,7 +140,7 @@ private:
     AP_Int16 _delay_loop_number;
     
 
-    AP_Int16 _blend_ks_thr;
+    AP_Float _blend_ks_thr;
     AP_Int16 _blend_kh_thr;
     
     // references

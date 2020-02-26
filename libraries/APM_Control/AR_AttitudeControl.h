@@ -145,6 +145,9 @@ public:
 
     // relax I terms of throttle and steering controllers
     void relax_I();
+    
+    AP_Int8 throttle_min_sm;
+    AP_Int8 throttle_max_sm;
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
@@ -161,6 +164,7 @@ private:
     //STSM controller variables
     float _tauu_1_dot; //for higher order sliding mode
     float _tauu_1; //for higher order sliding mode
+
 
     // flag to indicate whether direct surge speed control is desired
     bool _THSM_control = 0;

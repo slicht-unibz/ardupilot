@@ -56,6 +56,7 @@ public:
         k_param_serial0_baud,   // deprecated, can be deleted
         k_param_serial1_baud,   // deprecated, can be deleted
         k_param_serial2_baud,   // deprecated, can be deleted
+        k_param_jsmanual,
 
         // 97: RSSI
         k_param_rssi = 97,
@@ -261,6 +262,8 @@ public:
     AP_Int8     mode4;
     AP_Int8     mode5;
     AP_Int8     mode6;
+    
+    AP_Int8        jsmanual;                  // my new parameter's description goes here
 
     Parameters() {}
 };

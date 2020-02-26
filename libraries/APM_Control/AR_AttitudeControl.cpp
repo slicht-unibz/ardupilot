@@ -380,6 +380,24 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("_KTDOT_SM", 19, AR_AttitudeControl, _Ktdot_SM, 0.5f),
+    
+    // @Param: _THR_MIN_SM"
+    // @DisplayName: Minimum throttle
+    // @Description: Throttle is constrained to be greater than this
+    // @Units: 1
+    // @Range: -100 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("_THR_MIN_SM", 20, AR_AttitudeControl, throttle_min_sm, -100),
+    
+    // @Param: _THR_MAX_SM"
+    // @DisplayName: Maximum throttle
+    // @Description: Throttle is constrained to be less than this
+    // @Units: 1
+    // @Range: -100 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("_THR_MAX_SM", 21, AR_AttitudeControl, throttle_max_sm, 100),
 
     AP_GROUPEND
 };

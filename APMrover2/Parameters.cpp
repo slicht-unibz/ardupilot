@@ -370,6 +370,13 @@ const AP_Param::Info Rover::var_info[] = {
     // @Path: ../libraries/AP_OSD/AP_OSD.cpp
     GOBJECT(osd, "OSD", AP_OSD),
 #endif
+	
+	// @Param: JSMANUAL
+	// @DisplayName: Manual control
+	// @Description: If this parameter is not zero, the automatic controller is neglected
+	// @Range: -32768 32767
+	// @User: Advanced
+	GSCALAR(jsmanual, "JSMANUAL", 0),
 
     AP_VAREND
 };

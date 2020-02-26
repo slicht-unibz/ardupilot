@@ -46,7 +46,7 @@ import numpy
 
 
 # comms settings
-vehicle_host_port = '127.0.0.1:14550'
+vehicle_host_port = '127.0.0.1:14551'
 loop_delay = 0.1
 joystick_host = '127.0.0.1'  # IP address of machine running CLS2Sim
 joystick_port = 15090        # UDP port configured in CLS2Sim
@@ -62,8 +62,6 @@ js_4 = '7'
 number_of_lanes = 5
 magic_lane_number = number_of_lanes * 2
 
-max_speed = 3.0
-
 class joystick_controller:
 
     # joystick interaction settings
@@ -73,7 +71,7 @@ class joystick_controller:
     # initialization
     joystick_center = 0.5
     output_center = 1500
-    output_scaling = 250
+    output_scaling = 500
 
     joystick_input = joystick_center
     vehicle_output = [0,0,0,0,0,0,0,0]
@@ -88,29 +86,32 @@ class joystick_controller:
     actuators = {}
     name = {}
 
-    roll_offset_gain = 1000
-    pitch_offset_gain = -500
-    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, 1, 1]
+    roll_offset_gain = 400 #1600
+    pitch_offset_gain = 400 #1600
+    #vehicle_output_gain = [1, 1, 0, 1, 1, 1, 0, 1] # FEEDBACK OFF
+    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.01, 1] # FEEDBACK ON
     cross_track_gain = 0
     
     def calc_controller_output(self):
 
         # React to roll position:
-        pitch_offset = (1.0-self.pos[0])*max_speed - self.vehicle_output[6]*self.vehicle_output_gain[6]
+        pitch_offset = 2.0*self.pos[0]-1.0 - self.vehicle_output[6]*self.vehicle_output_gain[6]
         roll_offset = 2.0*self.pos[1]-1.0 - self.vehicle_output[2]*self.vehicle_output_gain[2]
 
         # Calculate joystick forces based on positions and vehicle outputs:
         self.force[0] = 0
-        self.force[0] = pitch_offset*self.pitch_offset_gain
+        self.force[0] = (pitch_offset)*self.pitch_offset_gain
         self.force[1] = roll_offset*self.roll_offset_gain #-self.cross_track_error*self.cross_track_gain + 
         pitch_force = self.force[0]
         roll_force = self.force[1]
 
         # Return desired outputs to vehicle:
-        self.controller_output[0] =  self.output_scaling*roll_offset + self.output_center
-        self.controller_output[1] =  self.output_scaling*pitch_offset + self.output_center # pitch is reversed!
+        self.controller_output[0] =  (1.0-2.0*self.pos[0])*self.output_scaling + self.output_center # self.output_scaling*roll_offset + self.output_center
+        self.controller_output[1] =  (2.0*self.pos[1]-1.0)*self.output_scaling + self.output_center # self.output_scaling*pitch_offset + self.output_center # pitch is reversed!
         self.controller_output[2] =  roll_force + self.output_center
         self.controller_output[3] =  pitch_force + self.output_center
+        
+  
         
         # Lane change threshold value reached (if not already over).
         if (self.lane_change_flag==0):
@@ -244,7 +245,13 @@ def main(win):
             js.calc_controller_output()
             #**************************************************#
             
-            vehicle.channels.overrides[js_1] = js.controller_output[0]
+            for i in range(4):
+				if js.controller_output[i]<1000:
+					js.controller_output[i]=1000
+				elif js.controller_output[i]>2000:
+					js.controller_output[i]=2000
+            
+            vehicle.channels.overrides[js_1] = js.controller_output[0];
             vehicle.channels.overrides[js_2] = js.controller_output[1]
             vehicle.channels.overrides[js_3] = js.controller_output[2]
             vehicle.channels.overrides[js_4] = js.controller_output[3]

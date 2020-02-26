@@ -105,7 +105,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Description: 10,000 x gain for calculation of virtual work on user joystick input.
     // @Units: 10^-4
     // @Range: 0 10000
-    // @Increment: 1
+    // @Increment: 0.01
     // @User: Standard
     AP_GROUPINFO("BLEND_KS_THR", 9, AR_WPNav, _blend_ks_thr, 0),
 

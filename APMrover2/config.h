@@ -142,3 +142,6 @@
  #define OSD_ENABLED DISABLED
 #endif
 
+#ifndef JSMANUAL
+ # define JSMANUAL      0     // default value for my new parameter
+#endif
