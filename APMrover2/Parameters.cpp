@@ -377,6 +377,13 @@ const AP_Param::Info Rover::var_info[] = {
 	// @Range: -32768 32767
 	// @User: Advanced
 	GSCALAR(jsmanual, "JSMANUAL", 0),
+	
+	// @Param: AFTER1STWP
+	// @DisplayName: Shared control only after 1st waypoint
+	// @Description: Activated if 1, deactivated if 0
+	// @Range: -32768 32767
+	// @User: Advanced
+	GSCALAR(after1stwp, "AFTER1STWP", 0),
 
     AP_VAREND
 };

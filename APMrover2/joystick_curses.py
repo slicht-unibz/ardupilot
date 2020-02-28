@@ -86,8 +86,8 @@ class joystick_controller:
     actuators = {}
     name = {}
 
-    roll_offset_gain = 400 #1600
-    pitch_offset_gain = 400 #1600
+    roll_offset_gain = 300 #1600
+    pitch_offset_gain = 300 #1600
     #vehicle_output_gain = [1, 1, 0, 1, 1, 1, 0, 1] # FEEDBACK OFF
     vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.01, 1] # FEEDBACK ON
     cross_track_gain = 0

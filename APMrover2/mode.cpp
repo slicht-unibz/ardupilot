@@ -405,7 +405,9 @@ float Mode::apply_human_control_str(float controller_wheel_angle_deg)
     float lateral_control_input = k_h * lateral_input;
     float virtual_human_input_work = 0;
     
-    if (k_s>0) {
+    uint16_t current_index = rover.mode_auto.mission.get_current_nav_index();
+    
+    if (k_s>0 && current_index>2*g.after1stwp) {
         //update_virtual_human_work
         virtual_human_input_work = 0.5 * k_s * powf(lateral_input - controller_wheel_angle_deg*0.05f, 2.0); // *0.05f is to normalize angle, -1 to 1
         if (g.jsmanual == 0) {
@@ -456,8 +458,10 @@ float Mode::apply_human_control_thr(float controller_throttle)
     float adjusted_throttle = 0;
     float throttle_control_input = k_h * throttle_input; // for comparison, controller_throttle is in [-100,100]
     float virtual_human_input_work = 0;
+
+    uint16_t current_index = rover.mode_auto.mission.get_current_nav_index();
     
-    if (k_s>0) {
+    if (k_s>0 && current_index>2*g.after1stwp) {
         //update_virtual_human_work
         virtual_human_input_work = 0.5 * k_s * powf(throttle_input - controller_throttle*0.01f, 2.0);
         if (g.jsmanual == 0){
@@ -474,12 +478,13 @@ float Mode::apply_human_control_thr(float controller_throttle)
 		//adjusted_throttle = 0.0;
 	//}
          
-    AP::logger().Write("JST","TimeUS,Ctl_thr,JoystickThrottle,Vh,BlendedThrottle","Qffff",
+    AP::logger().Write("JST","TimeUS,Ctl_thr,JoystickThrottle,Vh,BlendedThrottle,CurrentIndex","QffffH",
                        AP_HAL::micros64(),
                        (double)controller_throttle,
                        (double)throttle_control_input,
                        (double)virtual_human_input_work,
-                       (double)adjusted_throttle);
+                       (double)adjusted_throttle,
+                       current_index);
 
     float throttle_correction = adjusted_throttle - controller_throttle;
     if (_current_delay_loop>max_loops){

@@ -145,3 +145,7 @@
 #ifndef JSMANUAL
  # define JSMANUAL      0     // default value for my new parameter
 #endif
+
+#ifndef AFTER1STWP
+ # define AFTER1STWP      0     // default value for my new parameter
+#endif
