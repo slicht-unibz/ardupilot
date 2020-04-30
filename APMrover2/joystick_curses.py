@@ -47,7 +47,7 @@ import numpy
 
 # comms settings
 vehicle_host_port = '127.0.0.1:14551'
-loop_delay = 0.1
+loop_delay = 0.05
 joystick_host = '127.0.0.1'  # IP address of machine running CLS2Sim
 joystick_port = 15090        # UDP port configured in CLS2Sim
 joystick_timeout = 8.0
@@ -86,8 +86,8 @@ class joystick_controller:
     actuators = {}
     name = {}
 
-    roll_offset_gain = 300 #1600
-    pitch_offset_gain = 300 #1600
+    roll_offset_gain = 1600 #1600
+    pitch_offset_gain = 1600 #1600
     #vehicle_output_gain = [1, 1, 0, 1, 1, 1, 0, 1] # FEEDBACK OFF
     vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.01, 1] # FEEDBACK ON
     cross_track_gain = 0
@@ -97,7 +97,7 @@ class joystick_controller:
         # React to roll position:
         pitch_offset = 2.0*self.pos[0]-1.0 - self.vehicle_output[6]*self.vehicle_output_gain[6]
         roll_offset = 2.0*self.pos[1]-1.0 - self.vehicle_output[2]*self.vehicle_output_gain[2]
-
+        
         # Calculate joystick forces based on positions and vehicle outputs:
         self.force[0] = 0
         self.force[0] = (pitch_offset)*self.pitch_offset_gain
@@ -108,8 +108,8 @@ class joystick_controller:
         # Return desired outputs to vehicle:
         self.controller_output[0] =  (1.0-2.0*self.pos[0])*self.output_scaling + self.output_center # self.output_scaling*roll_offset + self.output_center
         self.controller_output[1] =  (2.0*self.pos[1]-1.0)*self.output_scaling + self.output_center # self.output_scaling*pitch_offset + self.output_center # pitch is reversed!
-        self.controller_output[2] =  roll_force + self.output_center
-        self.controller_output[3] =  pitch_force + self.output_center
+        self.controller_output[2] =  roll_offset #force + self.output_center
+        self.controller_output[3] =  pitch_offset #force + self.output_center
         
   
         
@@ -127,7 +127,7 @@ class joystick_controller:
         else:
             if (abs(roll_offset) < self.threshold):
                 self.lane_change_flag = 0
-
+                print('RECENTERED')
     
 def lane_change(vehicle,magic_lane_number,direction):  # react to lane change command
 	nextwaypoint=vehicle.commands.next -1 # -1 is to account for DO_CHANGE_SPEED
@@ -190,18 +190,7 @@ def main(win):
 
     start_time = time.time()
     
-    # Setup listener for navigation message:
-    @vehicle.on_message('NAV_CONTROLLER_OUTPUT')
-    def listener(self, name, message):
-        js.cross_track_error = float(message.xtrack_error)
-        js.speed_error = float(message.aspd_error)
-        js.nav_bearing = float(message.nav_bearing)
-        js.target_bearing = float(message.target_bearing)
-        win.addstr(1,0,message.name)
-        current_time = time.time()
-        elapsed_time = current_time-start_time
-        win.addstr('  ' + str(numpy.around(elapsed_time,2)))
-
+    	
     # Setup listener for navigation message:
     @vehicle.on_message('NAMED_VALUE_FLOAT')
     def listener(self, name, message):
@@ -209,7 +198,7 @@ def main(win):
         if (output_name[0:7]=='js_out_'):
             output_number = int(output_name[7])
             js.vehicle_output[output_number-1] = float(message.value)
-        win.addstr(output_number,0,message.name)
+        win.addstr(output_number,0,str(message.value))
         current_time = time.time()
         elapsed_time = current_time-start_time
         win.addstr('  ' + str(numpy.around(elapsed_time,2)))
@@ -245,7 +234,17 @@ def main(win):
             js.calc_controller_output()
             #**************************************************#
             
-            for i in range(4):
+
+            
+            # Print positions
+            win.addstr(25,0,'Control:' + str(numpy.array(js.controller_output[2])))
+            win.addstr(10,0,'Joystick:' + str(numpy.around(numpy.array(js.pos[0:4]),2)))
+            win.addstr(11,0,'Control:' + str(numpy.around(numpy.array(js.controller_output),0)))
+            win.addstr(12,0,'Vehicle:' + str(numpy.around(numpy.array(js.vehicle_output),1)))
+            win.addstr(13,0,'Steering angle:' + str(numpy.around(numpy.array(js.vehicle_output[2]),1)))
+        #    win.addstr(14,0,'NAV BEARING:' + str(numpy.around(numpy.array(js.nav_bearing),1)))
+        
+            for i in range(4): 
 				if js.controller_output[i]<1000:
 					js.controller_output[i]=1000
 				elif js.controller_output[i]>2000:
@@ -256,22 +255,20 @@ def main(win):
             vehicle.channels.overrides[js_3] = js.controller_output[2]
             vehicle.channels.overrides[js_4] = js.controller_output[3]
             
-            # Print positions
-
-            win.addstr(10,0,'Joystick:' + str(numpy.around(numpy.array(js.pos[0:4]),2)))
-            win.addstr(11,0,'Control:' + str(numpy.around(numpy.array(js.controller_output),0)))
-            win.addstr(12,0,'Vehicle:' + str(numpy.around(numpy.array(js.vehicle_output),1)))
-            
             # Exectute lane change if triggered:
             if js.lane_change_flag :
-                win.move(3,0)
-                win.addstr('LANE CHANGE COMMANDED: Center Stick to Regain Control')
+				win.addstr(3,0,'LANE CHANGE COMMANDED: Center Stick to Regain Control')
+            else:
+                win.addstr(3,0,'LANE CHANGE ENDED')
+					
                 
             if (js.trigger_lane_change==0):
                  pass
             else:
                 lane_change(vehicle,magic_lane_number,js.trigger_lane_change)
                 js.trigger_lane_change = 0
+                
+            
                 
             # check for keyboard input, quit if 'enter' key hit:
             try:
@@ -281,6 +278,8 @@ def main(win):
                     print('Key Up')
                 if key == 'KEY_DOWN':
                     debug_value += -0.05
+                if key == 'c':
+					win.clear()
                 if key == os.linesep:
                     #Clear overrides and close vehicle object before exiting script
                     vehicle.channels.overrides = {}
