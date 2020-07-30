@@ -47,7 +47,7 @@ import numpy
 
 # comms settings
 vehicle_host_port = '127.0.0.1:14551'
-loop_delay = 0.01
+loop_delay = 0.05
 joystick_host = '127.0.0.1'  # IP address of machine running CLS2Sim
 joystick_port = 15090        # UDP port configured in CLS2Sim
 joystick_timeout = 8.0
