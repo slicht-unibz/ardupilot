@@ -47,7 +47,7 @@ import numpy
 
 # comms settings
 vehicle_host_port = '127.0.0.1:14551'
-loop_delay = 0.05
+loop_delay = 0.01
 joystick_host = '127.0.0.1'  # IP address of machine running CLS2Sim
 joystick_port = 15090        # UDP port configured in CLS2Sim
 joystick_timeout = 8.0
@@ -88,8 +88,8 @@ class joystick_controller:
 
     roll_offset_gain = 1600 #1600
     pitch_offset_gain = 1600 #1600
-    #vehicle_output_gain = [1, 1, 0, 1, 1, 1, 0, 1] # FEEDBACK OFF
-    vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.01, 1] # FEEDBACK ON
+    vehicle_output_gain = [1, 1, 0, 1, 1, 1, 0, 1] # FEEDBACK OFF
+    #vehicle_output_gain = [1, 1, 0.05, 1, 1, 1, -0.01, 1] # FEEDBACK ON
     cross_track_gain = 0
     
     def calc_controller_output(self):
@@ -207,10 +207,13 @@ def main(win):
     joystick_attempts = 1
     js.pos = [js.joystick_center+debug_value,js.joystick_center,js.joystick_center,js.joystick_center]
     
+    timeLastRcOverride = time.time()
+    currentTime = timeLastRcOverride
+    
     while 1:
      #   try:
         if 1:
-            time.sleep(loop_delay)
+            #time.sleep(loop_delay)
 
             if joystick_attempts>0:
                 try:
@@ -250,10 +253,13 @@ def main(win):
 				elif js.controller_output[i]>2000:
 					js.controller_output[i]=2000
             
-            vehicle.channels.overrides[js_1] = js.controller_output[0];
-            vehicle.channels.overrides[js_2] = js.controller_output[1]
-            vehicle.channels.overrides[js_3] = js.controller_output[2]
-            vehicle.channels.overrides[js_4] = js.controller_output[3]
+            currentTime = time.time()
+            if currentTime-timeLastRcOverride>loop_delay:
+				timeLastRcOverride = currentTime
+				vehicle.channels.overrides[js_1] = js.controller_output[0]
+				vehicle.channels.overrides[js_2] = js.controller_output[1]
+				vehicle.channels.overrides[js_3] = js.controller_output[2]
+				vehicle.channels.overrides[js_4] = js.controller_output[3]
             
             # Exectute lane change if triggered:
             if js.lane_change_flag :
